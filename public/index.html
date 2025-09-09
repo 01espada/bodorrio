@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invitación de Boda - Nairobi & Marco Antonio</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;600;700&family=Playfair+Display:wght@400;600&family=Open+Sans:wght@300;400&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Open Sans', sans-serif;
+            background: linear-gradient(135deg, #6b7b5a 0%, #8b9b6a 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .invitation-container {
+            max-width: 600px;
+            width: 100%;
+            background: linear-gradient(135deg, #f8f6f0 0%, #fff 100%);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            overflow: hidden;
+            position: relative;
+            animation: fadeIn 1s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .floral-border {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(circle at 10% 10%, rgba(139, 155, 106, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 90% 10%, rgba(139, 155, 106, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 10% 90%, rgba(139, 155, 106, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 90% 90%, rgba(139, 155, 106, 0.1) 0%, transparent 50%);
+            pointer-events: none;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 40px 30px 20px;
+            position: relative;
+        }
+        
+        .rings {
+            font-size: 3rem;
+            color: #8b9b6a;
+            margin-bottom: 20px;
+            animation: sparkle 2s ease-in-out infinite;
+        }
+        
+        @keyframes sparkle {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .title {
+            font-family: 'Dancing Script', cursive;
+            font-size: 2.5rem;
+            color: #6b7b5a;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .subtitle {
+            font-family: 'Playfair Display', serif;
+            font-size: 1rem;
+            color: #8b8b8b;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        
+        .names-section {
+            padding: 30px;
+            text-align: center;
+            background: linear-gradient(135deg, rgba(139, 155, 106, 0.05) 0%, rgba(255, 255, 255, 0.8) 100%);
+            margin: 20px;
+            border-radius: 15px;
+            border: 2px solid rgba(139, 155, 106, 0.2);
+        }
+        
+        .bride-groom {
+            font-family: 'Dancing Script', cursive;
+            font-size: 2.8rem;
+            color: #6b7b5a;
+            margin: 15px 0;
+            font-weight: 700;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .ampersand {
+            font-size: 4rem;
+            color: #8b9b6a;
+            margin: 20px 0;
+            font-family: 'Dancing Script', cursive;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        .details-section {
+            padding: 30px;
+        }
+        
+        .detail-item {
+            display: flex;
+            align-items: center;
+            margin: 25px 0;
+            padding: 15px;
+            background: rgba(139, 155, 106, 0.05);
+            border-radius: 10px;
+            border-left: 4px solid #8b9b6a;
+        }
+        
+        .detail-icon {
+            font-size: 1.5rem;
+            color: #8b9b6a;
+            margin-right: 15px;
+            width: 30px;
+            text-align: center;
+        }
+        
+        .detail-content h3 {
+            font-family: 'Playfair Display', serif;
+            color: #6b7b5a;
+            font-size: 1.1rem;
+            margin-bottom: 5px;
+        }
+        
+        .detail-content p {
+            color: #666;
+            font-size: 0.95rem;
+            line-height: 1.4;
+        }
+        
+        .rsvp-section {
+            background: #6b7b5a;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .rsvp-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+        
+        .rsvp-details {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .contact-info {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            display: inline-block;
+        }
+        
+        .flowers {
+            position: absolute;
+            color: rgba(139, 155, 106, 0.3);
+            font-size: 2rem;
+            animation: sway 4s ease-in-out infinite;
+        }
+        
+        @keyframes sway {
+            0%, 100% { transform: rotate(-5deg); }
+            50% { transform: rotate(5deg); }
+        }
+        
+        .flower-1 { top: 20px; left: 20px; }
+        .flower-2 { top: 20px; right: 20px; }
+        .flower-3 { bottom: 20px; left: 20px; }
+        .flower-4 { bottom: 20px; right: 20px; }
+        
+        .rsvp-form {
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            font-family: 'Playfair Display', serif;
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: white;
+        }
+        
+        .radio-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .radio-option {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .radio-option:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateX(5px);
+        }
+        
+        .radio-option input[type="radio"] {
+            display: none;
+        }
+        
+        .radio-custom {
+            width: 20px;
+            height: 20px;
+            border: 2px solid white;
+            border-radius: 50%;
+            margin-right: 10px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .radio-option input[type="radio"]:checked + .radio-custom {
+            background: white;
+            border-color: white;
+        }
+        
+        .radio-option input[type="radio"]:checked + .radio-custom::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: #6b7b5a;
+            border-radius: 50%;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .radio-text {
+            font-size: 1rem;
+            color: white;
+        }
+        
+        .guest-select, .text-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 1rem;
+            font-family: 'Open Sans', sans-serif;
+        }
+        
+        .guest-select:focus, .text-input:focus {
+            outline: none;
+            border-color: white;
+            background: rgba(255,255,255,0.2);
+        }
+        
+        .text-input::placeholder {
+            color: rgba(255,255,255,0.7);
+        }
+        
+        .guest-select option {
+            background: #6b7b5a;
+            color: white;
+        }
+        
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #8b9b6a 0%, #a0b070 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .success-message {
+            background: rgba(0,255,0,0.2);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            text-align: center;
+            display: none;
+        }
+        
+        .footer-message {
+            text-align: center;
+            padding: 20px;
+            font-family: 'Dancing Script', cursive;
+            font-size: 1.3rem;
+            color: #8b9b6a;
+            background: linear-gradient(135deg, rgba(139, 155, 106, 0.05) 0%, transparent 100%);
+        }
+        
+        @media (max-width: 768px) {
+            .invitation-container {
+                margin: 10px;
+            }
+            
+            .bride-groom {
+                font-size: 2.2rem;
+            }
+            
+            .ampersand {
+                font-size: 3rem;
+            }
+            
+            .title {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="invitation-container">
+        <div class="floral-border"></div>
+        
+        <!-- Flores decorativas -->
+        <div class="flowers flower-1">🌿</div>
+        <div class="flowers flower-2">🌸</div>
+        <div class="flowers flower-3">🌿</div>
+        <div class="flowers flower-4">🌸</div>
+        
+        <div class="header">
+            <div class="rings">💍</div>
+            <h1 class="title">Nos Casamos</h1>
+            <p class="subtitle">Te invitamos a celebrar</p>
+        </div>
+        
+        <div class="names-section">
+            <div class="bride-groom">Nairobi Aranzazu</div>
+            <div class="bride-groom" style="font-size: 1.8rem; color: #8b8b8b;">Montes Águila</div>
+            <div class="ampersand">&</div>
+            <div class="bride-groom">Marco Antonio</div>
+            <div class="bride-groom" style="font-size: 1.8rem; color: #8b8b8b;">Ramos Reynoso</div>
+        </div>
+        
+        <div class="details-section">
+            <div class="detail-item">
+                <div class="detail-icon">📅</div>
+                <div class="detail-content">
+                    <h3>Fecha</h3>
+                    <p>Sábado, 15 de Agosto de 2025</p>
+                </div>
+            </div>
+            
+            <div class="detail-item">
+                <div class="detail-icon">🕕</div>
+                <div class="detail-content">
+                    <h3>Hora</h3>
+                    <p>5:00 PM - Ceremonia Religiosa<br>
+                    6:30 PM - Recepción</p>
+                </div>
+            </div>
+            
+            <div class="detail-item">
+                <div class="detail-icon">⛪</div>
+                <div class="detail-content">
+                    <h3>Ceremonia Religiosa</h3>
+                    <p>Parroquia San José<br>
+                    Av. Juárez #123, Centro Histórico<br>
+                    Zapopan, Jalisco</p>
+                </div>
+            </div>
+            
+            <div class="detail-item">
+                <div class="detail-icon">🏛️</div>
+                <div class="detail-content">
+                    <h3>Recepción</h3>
+                    <p>Salón de Eventos "Villa Esperanza"<br>
+                    Blvd. Puerta de Hierro #456<br>
+                    Zapopan, Jalisco</p>
+                </div>
+            </div>
+            
+            <div class="detail-item">
+                <div class="detail-icon">👔</div>
+                <div class="detail-content">
+                    <h3>Código de Vestimenta</h3>
+                    <p>Formal / Cocktail<br>
+                    <em>Por favor evitar colores blanco y verde oliva</em></p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="rsvp-section">
+            <h2 class="rsvp-title">Confirmación de Asistencia</h2>
+            <div class="rsvp-details">
+                <p>Por favor confirma tu asistencia antes del<br>
+                <strong>1 de Agosto de 2025</strong></p>
+            </div>
+            
+            <form class="rsvp-form" id="rsvpForm">
+                <div class="form-group">
+                    <label class="form-label">¿Confirmas tu asistencia a nuestra boda?</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="attendance" value="si" id="attendYes">
+                            <span class="radio-custom"></span>
+                            <span class="radio-text">✅ ¡Sí, asistiré con mucho gusto!</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="attendance" value="no" id="attendNo">
+                            <span class="radio-custom"></span>
+                            <span class="radio-text">❌ No podré asistir</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group" id="guestCountGroup" style="display: none;">
+                    <label class="form-label">¿Cuántas personas asistirán?</label>
+                    <select class="guest-select" name="guestCount">
+                        <option value="1">1 persona</option>
+                        <option value="2">2 personas</option>
+                        <option value="3">3 personas</option>
+                        <option value="4">4 personas</option>
+                        <option value="5">5+ personas</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Nombre completo:</label>
+                    <input type="text" class="text-input" name="guestName" placeholder="Tu nombre completo" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Mensaje especial (opcional):</label>
+                    <textarea class="text-input" name="message" placeholder="Escribe un mensaje para los novios..." rows="3"></textarea>
+                </div>
+                
+                <button type="submit" class="submit-btn">Confirmar Asistencia 💕</button>
+            </form>
+            
+            <div class="contact-info">
+                <p><strong>📱 WhatsApp:</strong> +52 33 3441-1995</p>
+                <p><strong>📧 Email:</strong> sama260905@gmail.com</p>
+            </div>
+        </div>
+        
+        <div class="footer-message">
+            <p>¡Esperamos celebrar este día tan especial contigo! 💕</p>
+        </div>
+    </div>
+    
+    <script>
+        // Mostrar/ocultar campo de número de invitados
+        const attendYes = document.getElementById('attendYes');
+        const attendNo = document.getElementById('attendNo');
+        const guestCountGroup = document.getElementById('guestCountGroup');
+        
+        attendYes.addEventListener('change', function() {
+            if (this.checked) {
+                guestCountGroup.style.display = 'block';
+            }
+        });
+        
+        attendNo.addEventListener('change', function() {
+            if (this.checked) {
+                guestCountGroup.style.display = 'none';
+            }
+        });
+        
+        // Manejar envío del formulario
+        document.getElementById('rsvpForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const attendance = formData.get('attendance');
+            const guestName = formData.get('guestName');
+            const guestCount = formData.get('guestCount') || '1';
+            const message = formData.get('message') || '';
+            
+            if (!guestName.trim()) {
+                alert('Por favor ingresa tu nombre completo');
+                return;
+            }
+            
+            // Crear mensaje para WhatsApp
+            let whatsappMessage = `🎉 *CONFIRMACIÓN DE BODA* 🎉\n\n`;
+            whatsappMessage += `*Boda:* Nairobi & Marco Antonio\n`;
+            whatsappMessage += `*Nombre:* ${guestName}\n`;
+            whatsappMessage += `*Asistencia:* ${attendance === 'si' ? 'SÍ asistiré ✅' : 'NO podré asistir ❌'}\n`;
+            
+            if (attendance === 'si') {
+                whatsappMessage += `*Número de personas:* ${guestCount}\n`;
+            }
+            
+            if (message.trim()) {
+                whatsappMessage += `*Mensaje:* ${message}\n`;
+            }
+            
+            whatsappMessage += `\n¡Gracias por confirmar! 💕`;
+            
+            // Crear enlace de WhatsApp
+            const phoneNumber = '523334411995'; // Cambiar por el número real
+            const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(whatsappMessage)}`;
+            
+            // Abrir WhatsApp
+            window.open(whatsappUrl, '_blank');
+            
+            // Mostrar mensaje de éxito
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success-message';
+            successDiv.style.display = 'block';
+            successDiv.innerHTML = '¡Gracias por confirmar! Se abrirá WhatsApp para enviar tu confirmación. 💕';
+            
+            this.appendChild(successDiv);
+            
+            // Resetear formulario después de 3 segundos
+            setTimeout(() => {
+                this.reset();
+                guestCountGroup.style.display = 'none';
+                successDiv.remove();
+            }, 3000);
+        });
+    </script>
+</body>
+</html>
