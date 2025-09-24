@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Panel de Invitados</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;margin:24px;background:#f7f7f7;}
+    h1{margin:0 0 16px;text-align:center}
+    .toolbar{display:flex;gap:8px;justify-content:space-between;align-items:center;margin:0 0 12px}
+    .search{flex:1}
+    input[type="search"]{width:100%;padding:8px 10px;border:1px solid #ccc;border-radius:6px}
+    table{width:100%;border-collapse:collapse;background:#fff}
+    th,td{border:1px solid #ddd;padding:8px;vertical-align:top}
+    th{background:#fafafa;text-align:left;position:sticky;top:0;z-index:1}
+    .ok{color:green;font-weight:700}
+    .no{color:#b00020;font-weight:700}
+    .muted{color:#666}
+    .status{margin:8px 0 0;color:#666}
+  </style>
+</head>
+<body>
+  <h1>Lista de Invitados</h1>
+  <div class="toolbar">
+    <div class="search"><input id="q" type="search" placeholder="Buscar por nombre, número o mensaje..."></div>
+    <div class="status" id="status"></div>
+  </div>
+  <div class="table-wrap">
+    <table id="tbl">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Número</th>
+          <th>Confirmación</th>
+          <th>Boletos asignados</th>
+          <th>Confirmados</th>
+          <th>Mensaje</th>
+          <th>RSVP</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <script>
+    const tbody = document.getElementById('tbody');
+    const statusEl = document.getElementById('status');
+    const q = document.getElementById('q');
+    let data = [];
+
+    function esc(s){ return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+    function render(rows){
+      const term = q.value.trim().toLowerCase();
+      const filtered = term ? rows.filter(r => {
+        return (r.Nombre||'').toLowerCase().includes(term) ||
+               (r.Telefono||'').toLowerCase().includes(term) ||
+               (r.Mensaje||'').toLowerCase().includes(term);
+      }) : rows;
+
+      tbody.innerHTML = filtered.map(r => {
+        const cls = r.Confirmacion === 'Asistirá' ? 'ok' : (r.Confirmacion === 'No asistirá' ? 'no' : 'muted');
+        return `<tr>
+          <td>${esc(r.Nombre)}</td>
+          <td>${esc(r.Telefono)}</td>
+          <td class="${cls}">${esc(r.Confirmacion)}</td>
+          <td>${esc(r.BoletosAsignados)}</td>
+          <td>${esc(r.Confirmados)}</td>
+          <td>${esc(r.Mensaje)}</td>
+          <td><span class="muted">${esc(r.RSVP_At)}</span></td>
+        </tr>`;
+      }).join('');
+
+      statusEl.textContent = `${filtered.length} de ${rows.length} registros`;
+    }
+
+    async function load(){
+      statusEl.textContent = 'Cargando...';
+      try{
+        const r = await fetch('/api/admin/rows');
+        const j = await r.json();
+        if(!r.ok || j.ok === false) throw new Error(j.error || 'Error cargando datos');
+        data = j.rows || [];
+        render(data);
+        statusEl.textContent = `${data.length} registros`;
+      }catch(e){
+        console.error(e);
+        statusEl.textContent = 'Error al cargar datos';
+      }
+    }
+
+    q.addEventListener('input', () => render(data));
+    load();
+  </script>
+</body>
+</html>

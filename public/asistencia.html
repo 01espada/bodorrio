@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmar Asistencia - Nairobi & Marco Antonio</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+</head>
+<body>
+    <div class="invitation-container">
+        <div class="floral-border"></div>
+            <!-- Flores decorativas -->
+            <div class="flowers flower-1">🌿</div>
+            <div class="flowers flower-2">🌸</div>
+            <div class="flowers flower-3">🌿</div>
+            <div class="flowers flower-4">🌸</div>
+        <div class="header">
+            <div class="rings"><span class="material-symbols-outlined">diamond</span></div>
+            <h1 class="title">Nos Casamos</h1>
+        </div>
+        <div class="rsvp-section">
+            <h2 class="rsvp-title">Confirmación de Asistencia</h2>
+            <div class="rsvp-details" id="rsvpInfo">
+                <p>Por favor confirma tu asistencia antes del<br>
+                <strong>11 de Febrero del 2026</strong></p>
+            </div>
+            <form class="rsvp-form" id="rsvpForm">
+                <div class="form-group">
+                    <div class="form-group">
+                        <label class="form-label">Nombre:</label>
+                        <input class="guest-select" name="guestName" id="guestNameInput" list="guestNameList" placeholder="Escribe tu nombre..." autocomplete="off" required />
+                        <datalist id="guestNameList"></datalist>
+                        <div id="nameStatus" class="name-status"></div>
+                    </div>
+                    <div class="radio-group hidden" id="attendanceSection">
+                        <label class="form-label">Hemos reservado <strong><span id="assignedTickets">X</span></strong> lugares.<br> ¿La cantidad de boletos es correcta?</label>
+                        <label class="radio-option">
+                            <input type="radio" name="attendance" value="si" id="attendYes">
+                            <span class="radio-custom"></span>
+                            <span class="radio-text">✅ ¡Sí, iremos <strong><span id="assignedTicketsInline">X</span></strong></span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="attendance" value="ninguno" id="attendNone">
+                            <span class="radio-custom"></span>
+                            <span class="radio-text">❌ No podremos asistir ninguno.</span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="attendance" value="cambiar" id="attendChange">
+                            <span class="radio-custom"></span>
+                            <span class="radio-text">Cambiar el número de boletos.</span>
+                        </label>
+                    </div>
+                </div>
+                <div id="guestCountGroup" class="form-group hidden">
+                    <label class="form-label">¿Cuántas personas asistirán?</label>
+                    <input class="guest-select" type="number" name="guestCount" min="1" max="10" step="1" placeholder="1 - 10" />
+                </div>
+                <div class="form-group hidden" id="messageSection">
+                    <label class="form-label">Mensaje especial (opcional):</label>
+                    <textarea class="text-input" name="message" placeholder="Escribe un mensaje para los novios..." rows="3"></textarea>
+                </div>
+                <button type="submit" class="submit-btn" id="submitBtn" disabled>Confirmar Asistencia 💕</button>
+            </form>
+            <!--<div class="contact-info">
+                <p><strong>📱 WhatsApp:</strong> +52 33 3441-1995</p>
+                <p><strong>📧 Email:</strong> sama260905@gmail.com</p>
+            </div> -->
+        </div>
+    </div>
+    <script>
+    const guestNameInput = document.getElementById('guestNameInput');
+    const guestNameList = document.getElementById('guestNameList');
+    const nameStatus = document.getElementById('nameStatus');
+    const assignedTicketsSpan = document.getElementById('assignedTickets');
+    const assignedTicketsInlineSpan = document.getElementById('assignedTicketsInline');
+    const attendanceSection = document.getElementById('attendanceSection');
+    const messageSection = document.getElementById('messageSection');
+    const rsvpInfo = document.getElementById('rsvpInfo');
+    const defaultRsvpInfoHTML = `<p>Por favor confirma tu asistencia antes del<br><strong>11 de Febrero del 2026</strong></p>`;
+    // Filtrar sugerencias: si >1 coincidencia, no mostrar; si 0, mostrar mensaje
+    guestNameInput.addEventListener('input', function() {
+        const val = this.value.trim().toLowerCase();
+        if (!val) { guestNameList.innerHTML=''; nameStatus.textContent=''; return; }
+        const matches = nombresValidos.filter(n => n.toLowerCase().includes(val));
+        if (matches.length === 1) {
+            guestNameList.innerHTML = `<option value="${matches[0]}"></option>`;
+            nameStatus.textContent = '';
+        } else if (matches.length === 0) {
+            guestNameList.innerHTML = '';
+            nameStatus.textContent = 'Nombre no encontrado';
+        } else {
+            guestNameList.innerHTML = '';
+            nameStatus.textContent = '';
+        }
+    });
+    const attendYes = document.getElementById('attendYes');
+    const attendChange = document.getElementById('attendChange');
+    const attendNone = document.getElementById('attendNone');
+    const guestCountGroup = document.getElementById('guestCountGroup');
+    const guestCountInput = document.querySelector('input[name="guestCount"]');
+    const submitBtn = document.getElementById('submitBtn');
+    let nombresValidos = [];
+    let invitados = [];
+
+        function updateSubmitState() {
+            const anyChecked = (attendYes && attendYes.checked) || (attendChange && attendChange.checked) || (attendNone && attendNone.checked);
+            submitBtn.disabled = !anyChecked;
+        }
+
+        attendYes.addEventListener('change', function() {
+            if (this.checked) {
+                guestCountGroup.classList.add('hidden');
+            }
+            updateSubmitState();
+        });
+        attendChange.addEventListener('change', function() {
+            if (this.checked) {
+                guestCountGroup.classList.remove('hidden');
+            }
+            updateSubmitState();
+        });
+        attendNone.addEventListener('change', function() {
+            if (this.checked) {
+                guestCountGroup.classList.add('hidden');
+            }
+            updateSubmitState();
+        });
+
+        async function cargarNombresInvitados() {
+            try {
+                const r = await fetch('/api/invitados');
+                const data = await r.json();
+                if (!data.ok || !Array.isArray(data.invitados)) throw new Error('No se pudo cargar la lista de invitados');
+                guestNameList.innerHTML = '';
+                invitados = data.invitados;
+                nombresValidos = data.invitados
+                    .map(inv => (inv.nombre||'').toString().trim())
+                    .filter(Boolean);
+                nameStatus.textContent = nombresValidos.length ? '' : 'No hay nombres disponibles';
+                assignedTicketsSpan.textContent = 'X';
+                if (assignedTicketsInlineSpan) assignedTicketsInlineSpan.textContent = 'X';
+                attendanceSection.classList.add('hidden');
+                messageSection.classList.add('hidden');
+                guestCountGroup.classList.add('hidden');
+                if (rsvpInfo) rsvpInfo.innerHTML = defaultRsvpInfoHTML;
+            } catch (e) {
+                guestNameList.innerHTML = '';
+                nameStatus.textContent = 'No se pudo cargar la lista';
+                assignedTicketsSpan.textContent = 'X';
+                if (assignedTicketsInlineSpan) assignedTicketsInlineSpan.textContent = 'X';
+                attendanceSection.classList.add('hidden');
+                messageSection.classList.add('hidden');
+                guestCountGroup.classList.add('hidden');
+                if (rsvpInfo) rsvpInfo.innerHTML = defaultRsvpInfoHTML;
+            }
+        }
+        cargarNombresInvitados();
+
+        function actualizarBoletosAsignados() {
+            const nombre = guestNameInput.value.trim();
+            if (!nombre) {
+                assignedTicketsSpan.textContent = 'X';
+                if (assignedTicketsInlineSpan) assignedTicketsInlineSpan.textContent = 'X';
+                attendanceSection.classList.add('hidden');
+                messageSection.classList.add('hidden');
+                guestCountGroup.classList.add('hidden');
+                submitBtn.disabled = true;
+                if (rsvpInfo) rsvpInfo.innerHTML = defaultRsvpInfoHTML;
+                return;
+            }
+            const inv = invitados.find(i => (i.nombre||'').toString().trim().toLowerCase() === nombre.toLowerCase());
+            if (!inv) {
+                assignedTicketsSpan.textContent = 'X';
+                if (assignedTicketsInlineSpan) assignedTicketsInlineSpan.textContent = 'X';
+                attendanceSection.classList.add('hidden');
+                messageSection.classList.add('hidden');
+                guestCountGroup.classList.add('hidden');
+                submitBtn.disabled = true;
+                if (rsvpInfo) rsvpInfo.innerHTML = defaultRsvpInfoHTML;
+                return;
+            }
+            const boletosNum = parseInt(inv.boletosAsignados ?? '0', 10);
+            const displayBoletos = !isNaN(boletosNum) ? boletosNum : 0;
+            assignedTicketsSpan.textContent = displayBoletos;
+            if (assignedTicketsInlineSpan) assignedTicketsInlineSpan.textContent = displayBoletos;
+
+            // Mensaje dinámico si ya tiene confirmados
+            const conf = Number(inv.confirmados);
+            if (Number.isFinite(conf) && conf > 0) {
+                if (rsvpInfo) rsvpInfo.innerHTML = `<p><strong>Ya están confirmados.</strong></p>`;
+            } else {
+                if (rsvpInfo) rsvpInfo.innerHTML = defaultRsvpInfoHTML;
+            }
+
+            attendanceSection.classList.remove('hidden');
+            messageSection.classList.remove('hidden');
+            if (attendYes) attendYes.checked = false;
+            if (attendChange) attendChange.checked = false;
+            if (attendNone) attendNone.checked = false;
+            updateSubmitState();
+
+            if (guestCountInput) {
+                const defaultCount = Math.max(1, Math.min(10, isNaN(boletosNum) ? 1 : boletosNum));
+                guestCountInput.value = String(defaultCount);
+            }
+        }
+
+        guestNameInput.addEventListener('change', actualizarBoletosAsignados);
+        guestNameInput.addEventListener('blur', actualizarBoletosAsignados);
+        guestNameInput.addEventListener('input', actualizarBoletosAsignados);
+
+        document.getElementById('rsvpForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const formData = new FormData(this);
+  const attendance = formData.get('attendance');
+  const guestName = formData.get('guestName');
+  let guestCount = formData.get('guestCount') || '1';
+  const guestCountNum = parseInt(guestCount, 10);
+  if (attendance !== 'ninguno') {
+    if (isNaN(guestCountNum) || guestCountNum < 1 || guestCountNum > 10) {
+      alert('Ingresa un número de personas entre 1 y 10');
+      return;
+    }
+    guestCount = String(guestCountNum);
+  }
+  const mensaje = formData.get('message') || ''; // <— usar "mensaje"
+
+  if (!guestName || !nombresValidos.includes(guestName)) {
+    alert('Por favor selecciona tu nombre de la lista');
+    return;
+  }
+  if (!attendance) {
+    alert('Por favor selecciona una opción de asistencia');
+    return;
+  }
+
+  let boletosToSend = 0;
+  if (attendance === 'si') {
+    const inv = invitados.find(i => (i.nombre||'').toString().trim().toLowerCase() === guestName.toLowerCase());
+    const asg = inv && typeof inv.boletosAsignados !== 'undefined' ? Number(inv.boletosAsignados) : NaN;
+    boletosToSend = Number.isFinite(asg) ? asg : Number(guestCount);
+  } else if (attendance === 'cambiar') {
+    boletosToSend = Number(guestCount);
+  } else {
+    boletosToSend = 0;
+  }
+
+  try {
+    const r = await fetch('/api/rsvp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ nombre: guestName, asistencia: attendance, boletos: boletosToSend, mensaje })
+    });
+    const j = await r.json().catch(() => ({}));
+    if (r.status === 423) {
+      alert(j.error || 'El archivo de invitados está en uso. Cierra Excel/OneDrive y vuelve a intentar.');
+      return;
+    }
+    if (!r.ok || j.ok === false) {
+      alert(j.error || 'No se pudo guardar tu confirmación. Intenta de nuevo.');
+      return;
+    }
+    const successDiv = document.createElement('div');
+    successDiv.className = 'success-message';
+    successDiv.innerHTML = '¡Gracias por confirmar! Redirigiendo...';
+    this.appendChild(successDiv);
+    setTimeout(() => { window.location.href = '/'; }, 1200);
+  } catch (err) {
+    alert('No se pudo guardar tu confirmación. Revisa tu conexión.');
+  }
+});
+    </script>
+</body>
+</html>
