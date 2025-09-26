@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Admin - BodaBot</title>
+    <style>
+        body {
+            font-family: 'Open Sans', sans-serif;
+            background: #f8f6f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .admin-container {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            text-align: center;
+        }
+        .admin-title {
+            font-size: 2rem;
+            color: #6b7b5a;
+            margin-bottom: 20px;
+        }
+        .bot-btn {
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            background: linear-gradient(135deg, #8b9b6a 0%, #a0b070 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        .bot-btn:disabled {
+            background: #bfc9b0;
+            cursor: not-allowed;
+        }
+        .status {
+            margin-top: 20px;
+            font-size: 1rem;
+            color: #6b7b5a;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div class="admin-title">Panel de Administración</div>
+        <button id="startBotBtn" class="bot-btn">Iniciar Bot de WhatsApp</button>
+        <div class="status" id="botStatus">Bot no iniciado</div>
+    </div>
+    <script>
+        const btn = document.getElementById('startBotBtn');
+        const statusDiv = document.getElementById('botStatus');
+        let botStarted = false;
+
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            statusDiv.textContent = 'Iniciando bot...';
+            try {
+                const res = await fetch('/start-bot', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    statusDiv.textContent = 'Bot iniciado ✅';
+                    botStarted = true;
+                } else {
+                    statusDiv.textContent = 'Error al iniciar el bot';
+                    btn.disabled = false;
+                }
+            } catch (e) {
+                statusDiv.textContent = 'Error de conexión';
+                btn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

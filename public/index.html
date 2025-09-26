@@ -383,6 +383,7 @@
                 <div class="detail-content">
                     <h3>Fecha</h3>
                     <p>Sábado, 11 de Abril del 2026</p>
+                    <button onclick="descargarICS()" style="margin-top:10px;padding:8px 16px;background:#8b9b6a;color:white;border:none;border-radius:6px;cursor:pointer;font-size:0.95rem;">Guardar en calendario</button>
                 </div>
             </div>
             
@@ -484,9 +485,28 @@
         <div class="footer-message">
             <p>¡Esperamos celebrar este día tan especial contigo! 💕</p>
         </div>
+        
+        <!-- Lista de regalos -->
+        <div style="text-align:center; padding: 20px 30px 30px;">
+            <a href="https://www.amazon.com.mx/wedding/registry/1Z81G6PV4KRLO" target="_blank" rel="noopener"
+               style="display:inline-block; padding:12px 18px; background:#8b9b6a; color:#fff; border:none; border-radius:10px; font-size:1rem; font-weight:600; text-decoration:none; box-shadow:0 6px 18px rgba(0,0,0,0.15);">
+                Lista de regalos 🎁
+            </a>
+        </div>
     </div>
     
     <script>
+        // Función para descargar archivo .ics (evento de calendario)
+        function descargarICS() {
+            const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nCALSCALE:GREGORIAN\nBEGIN:VEVENT\nSUMMARY:Boda Nairobi & Marco Antonio\nDESCRIPTION:¡Acompáñanos a celebrar nuestra boda!\nLOCATION:Parroquia del Señor del Monte, C. Miguel Arana #76, Jocotepec Centro, 45800 Jalisco y Granja Reynoso, Camino al Sauz, 45840 El Sauz, Jalisco\nDTSTART:20260411T190000Z\nDTEND:20260412T010000Z\nEND:VEVENT\nEND:VCALENDAR`;
+            const blob = new Blob([icsContent.replace(/\n/g, '\r\n')], { type: 'text/calendar' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'boda-nairobi-marco.ics';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
         // Mostrar/ocultar campo de número de invitados
         const attendYes = document.getElementById('attendYes');
         const attendNo = document.getElementById('attendNo');

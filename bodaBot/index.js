@@ -2,16 +2,12 @@ const fs = require("fs");
 const xlsx = require("xlsx");
 const { Client, LocalAuth } = require("whatsapp-web.js");
 
-const client = new Client({
-    authStrategy: new LocalAuth(), // mantiene sesión indefinida
-    puppeteer: { headless: true }  // sin abrir ventana
-});
 
 // ====================
 // 🔹 Utilidades Excel
 // ====================
 function leerInvitados() {
-    const workbook = xlsx.readFile("invitados.xlsx");
+    const workbook = xlsx.readFile("invitados.xls");
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     return { workbook, invitados: xlsx.utils.sheet_to_json(sheet) };
 }
@@ -19,74 +15,149 @@ function leerInvitados() {
 function guardarInvitados(invitados, workbook) {
     const newSheet = xlsx.utils.json_to_sheet(invitados);
     workbook.Sheets[workbook.SheetNames[0]] = newSheet;
-    xlsx.writeFile(workbook, "invitados.xlsx");
+    xlsx.writeFile(workbook, "invitados.xls");
 }
 
-function marcarAsistencia(numero, estado) {
+function actualizarBoletos(numero, confirmados) {
     const { workbook, invitados } = leerInvitados();
 
-    let actualizado = false;
     invitados.forEach(inv => {
         if (inv.Numero.toString() === numero.replace("@c.us", "")) {
-            inv.Confirmacion = estado;
-            actualizado = true;
+            inv.BoletosConfirmados = confirmados;
         }
     });
 
-    if (actualizado) guardarInvitados(invitados, workbook);
+    guardarInvitados(invitados, workbook);
 }
 
 // ====================
-// 🔹 Lógica de envío
+// 🔹 Lógica WhatsApp
 // ====================
-async function enviarInvitaciones() {
-    const { invitados } = leerInvitados();
+let lastQR = null;
+let client = null;
+let ready = false;
+let _handlersInstalled = false;
 
-    for (let i = 0; i < invitados.length; i++) {
-        const inv = invitados[i];
-        let numero = inv.Numero.toString() + "@c.us";
-        let mensaje = `Hola ${inv.Nombre} 🎉\n\n¡Estás invitado a nuestra boda 💍!\n\n📅 Fecha: 12 de diciembre\n📍 Lugar: Hacienda XYZ\n\nPor favor responde con *Sí* o *No* para confirmar tu asistencia.`;
+function iniciarBot(qrCallback) {
+    if (client) return; // Ya iniciado
+    // instalar manejadores globales una sola vez para evitar que errores no capturados
+    // terminen el proceso cuando ocurren errores en puppeteer/whatsapp-web.js
+    if (!_handlersInstalled) {
+        _handlersInstalled = true;
+        process.on('unhandledRejection', (reason, promise) => {
+            console.error('UnhandledRejection en bodaBot:', reason && (reason.stack || reason.message || reason));
+            if (client) {
+                try { client.destroy && client.destroy(); } catch (e) {}
+                client = null; ready = false;
+                setTimeout(() => { try { iniciarBot(); } catch (e) { console.error('Retry after unhandledRejection failed:', e && e.message); } }, 5000);
+            }
+        });
 
-        try {
-            await client.sendMessage(numero, mensaje);
-            console.log(`✅ Invitación enviada a ${inv.Nombre} (${inv.Numero})`);
-        } catch (err) {
-            console.log(`❌ Error enviando a ${inv.Nombre}:`, err);
+        process.on('uncaughtException', (err) => {
+            console.error('UncaughtException en bodaBot:', err && (err.stack || err.message || err));
+            if (client) {
+                try { client.destroy && client.destroy(); } catch (e) {}
+                client = null; ready = false;
+                setTimeout(() => { try { iniciarBot(); } catch (e) { console.error('Retry after uncaughtException failed:', e && e.message); } }, 5000);
+            }
+        });
+    }
+    client = new Client({
+        authStrategy: new LocalAuth(),
+        puppeteer: {
+            headless: true,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--single-process',
+                '--disable-gpu'
+            ]
         }
+    });
 
-        // Esperar 5 segundos entre mensajes (ajústalo a gusto)
-        await new Promise(res => setTimeout(res, 5000));
+    client.on("message", msg => {
+        let texto = msg.body.trim().toLowerCase();
+        const { invitados } = leerInvitados();
+        let invitado = invitados.find(inv => inv.Numero.toString() === msg.from.replace("@c.us", ""));
+        if (!invitado) return;
+        if (texto === "todos") {
+            actualizarBoletos(msg.from, invitado.BoletosAsignados);
+            msg.reply(`¡Gracias! 🎉 Hemos confirmado tus ${invitado.BoletosAsignados} boletos.`);
+        } else if (!isNaN(parseInt(texto))) {
+            let num = parseInt(texto);
+            if (num > invitado.BoletosAsignados) {
+                msg.reply(`⚠️ Solo tienes ${invitado.BoletosAsignados} boletos asignados. Por favor indica un número válido.`);
+            } else {
+                actualizarBoletos(msg.from, num);
+                msg.reply(`¡Gracias! 🎉 Hemos confirmado ${num} boleto(s) para ti.`);
+            }
+        } else {
+            msg.reply("Por favor responde con *Todos* si van todos tus boletos, o con un número (ej. 2) para indicar cuántos asistirán.");
+        }
+    });
+
+    client.on("qr", qr => {
+        lastQR = qr;
+        if (typeof qrCallback === 'function') qrCallback(qr);
+        console.log("📱 Escanea este QR con tu WhatsApp:");
+        console.log(qr);
+    });
+
+    client.on("ready", () => {
+        ready = true;
+        console.log("🤖 Bot listo y conectado a WhatsApp!");
+    });
+
+    client.on('disconnected', (reason) => {
+        ready = false;
+        console.log('⚠️ Bot desconectado:', reason);
+        // intentamos reiniciar tras un corto retardo
+        try {
+            client && client.destroy && client.destroy();
+        } catch (e) {}
+        client = null;
+        // reintentar iniciar en 5s
+        setTimeout(() => {
+            try {
+                iniciarBot();
+            } catch (e) {
+                console.error('Error re-iniciando bot:', e && e.message);
+            }
+        }, 5000);
+    });
+
+    // initialize with basic protection against synchronous throws
+    try {
+        client.initialize();
+    } catch (err) {
+        console.error('Error during client.initialize():', err && err.message);
+        // cleanup and schedule a retry
+        try { client && client.destroy && client.destroy(); } catch (e) {}
+        client = null;
+        setTimeout(() => {
+            try { iniciarBot(qrCallback); } catch (e) { console.error('Retry iniciarBot failed:', e && e.message); }
+        }, 5000);
     }
 }
 
-// ====================
-// 🔹 Eventos WhatsApp
-// ====================
-client.on("qr", qr => {
-    console.log("📱 Escanea este QR con tu WhatsApp:");
-    console.log(qr);
-});
+function getLastQR() {
+    return lastQR;
+}
 
-client.on("ready", () => {
-    console.log("🤖 Bot listo y conectado a WhatsApp!");
-    // Descomenta la siguiente línea solo cuando quieras enviar todas las invitaciones:
-    // enviarInvitaciones();
-});
+function isReady() {
+    return ready;
+}
 
-client.on("disconnected", reason => {
-    console.log("⚠️ Cliente desconectado:", reason);
-});
+async function sendMessage(numeroE164, text) {
+    if (!client || !ready) throw new Error("Bot no está listo");
+    const digits = (numeroE164 || "").toString().replace(/\D/g, "");
+    if (!digits) throw new Error("Número inválido");
+    const chatId = digits.endsWith("@c.us") ? digits : `${digits}@c.us`;
+    return client.sendMessage(chatId, text || "");
+}
 
-client.on("message", msg => {
-    let texto = msg.body.toLowerCase().trim();
-
-    if (texto === "sí" || texto === "si") {
-        marcarAsistencia(msg.from, "Asistirá");
-        msg.reply("¡Gracias por confirmar tu asistencia! 🎉💍");
-    } else if (texto === "no") {
-        marcarAsistencia(msg.from, "No asistirá");
-        msg.reply("Gracias, registramos que no podrás asistir 🙏");
-    }
-});
-
-client.initialize();
+module.exports = { iniciarBot, getLastQR, isReady, sendMessage };
