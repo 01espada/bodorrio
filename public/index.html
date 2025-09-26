@@ -6,6 +6,27 @@
     <title>Invitación de Boda - Nairobi & Marco Antonio</title>
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+    <style>
+        /* Fondo para la sección de nombres */
+        .names-section {
+            position: relative;
+            background: url('fondo.jpeg') center center / cover no-repeat;
+            padding: 40px 20px;
+            border-radius: 18px;
+            overflow: hidden;
+        }
+        /* Capa suave para mejorar legibilidad del texto sobre la imagen */
+        .names-section::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(255,255,255,0.55);
+            
+        }
+        .names-section > * {
+            position: relative; /* asegurar que el texto quede encima del overlay */
+        }
+    </style>
 </head>
 <body>
     <div class="invitation-container">

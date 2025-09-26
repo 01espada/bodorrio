@@ -299,3 +299,45 @@ app.post("/admin/save", (req, res) => {
 app.listen(PORT, () => {
   console.log(`✅ Servidor corriendo en http://localhost:${PORT}`);
 });
+
+// ...existing code (dentro del handler de GET /admin, justo después de abrir el <form> antes de <table>)...
+    html += `
+    <div id="statsResumen" style="
+        display:flex;
+        flex-wrap:wrap;
+        gap:14px;
+        margin:18px 0 14px;
+        padding:14px 18px;
+        background:#ffffff;
+        border:1px solid #d9dfd1;
+        border-radius:12px;
+        font-size:.95rem;
+        color:#4a5a3a;
+        box-shadow:0 2px 6px rgba(0,0,0,.05);
+    ">
+        <span><b>Total:</b> ${invitados.length}</span>
+        <span><b>Pendientes:</b> ${
+            invitados.filter(i => i.BoletosConfirmados === '' || i.BoletosConfirmados === undefined || i.BoletosConfirmados === null).length
+        }</span>
+        <span><b>Irán:</b> ${
+            invitados.filter(i => {
+                const v = parseInt(i.BoletosConfirmados,10);
+                return !isNaN(v) && v > 0;
+            }).length
+        }</span>
+        <span><b>No irán:</b> ${
+            invitados.filter(i => {
+                // Se considera "No irán" cuando explícitamente está 0 (distinto de vacío)
+                return (i.BoletosConfirmados !== '' && i.BoletosConfirmados !== null && i.BoletosConfirmados !== undefined) &&
+                       (parseInt(i.BoletosConfirmados,10) === 0);
+            }).length
+        }</span>
+    </div>
+    <table id="invitadosTable">
+        <tr>
+            <th>Nombre</th>
+            <th>Número</th>
+            <th>Boletos Asignados</th>
+            <th>Boletos Confirmados</th>
+        </tr>`;
+// ...existing code...
