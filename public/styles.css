@@ -14,7 +14,7 @@ body { font-family: 'Open Sans', sans-serif; background: linear-gradient(135deg,
 .title { font-family: 'Dancing Script', cursive; font-size: 2.5rem; color: #6b7b5a; margin-bottom: 10px; font-weight: 600; }
 .subtitle { font-family: 'Playfair Display', serif; font-size: 1rem; color: #8b8b8b; letter-spacing: 2px; text-transform: uppercase; }
 .names-section { padding: 30px; text-align: center; background: linear-gradient(135deg, rgba(139, 155, 106, 0.05) 0%, rgba(255, 255, 255, 0.8) 100%); margin: 20px; border-radius: 15px; border: 2px solid rgba(139, 155, 106, 0.2); }
-.bride-groom { font-family: 'Dancing Script', cursive; font-size: 2.8rem; color: #6b7b5a; margin: 15px 0; font-weight: 700; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
+.bride-groom { font-family: 'Dancing Script', cursive; font-size: 2.8rem; color: #6b7b5a; margin: 15px 0; font-weight: 700; text-shadow: 1px 1px 2px rgba(0,0,0); }
 
 /* Subname style extracted from inline */
 .bride-groom-sub { font-size: 1.8rem; color: #8b8b8b; }
