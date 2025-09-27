@@ -34,9 +34,9 @@
         
         <!-- Flores decorativas -->
         <div class="flowers flower-1">🌿</div>
-        <div class="flowers flower-2">🌸</div>
+        <div class="flowers flower-2"><span class="material-symbols-outlined">psychiatry</span></div>
         <div class="flowers flower-3">🌿</div>
-        <div class="flowers flower-4">🌸</div>
+        <div class="flowers flower-4"><span class="material-symbols-outlined">psychiatry</span></div>
         
         <div class="header">
             <div class="rings"><span class="material-symbols-outlined">diamond</span></div>
@@ -244,6 +244,40 @@
                 successDiv.remove();
             }, 3000);
         });
+    </script>
+    <script>
+        function descargarICS() {
+            // Generar marcas de tiempo básicas
+            const dtstamp = new Date().toISOString().replace(/[-:]/g,'').split('.')[0] + 'Z';
+
+            const ics =
+`BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Boda Nairobi Marco//ES
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+BEGIN:VEVENT
+UID:${Date.now()}@bodanairobi
+DTSTAMP:${dtstamp}
+DTSTART:20260411T130000
+DTEND:20260411T230000
+SUMMARY:Boda de Nairobi y Marco Antonio
+LOCATION:Parroquia del Señor del Monte; luego Recepción en Granja Reynoso
+DESCRIPTION:Ceremonia 1:00 PM\\nRecepción 3:00 PM\\n¡Te esperamos!
+END:VEVENT
+END:VCALENDAR`;
+
+            const blob = new Blob([ics.replace(/\n/g,"\r\n")], { type: 'text/calendar;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'boda-nairobi-marco.ics';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(()=> {
+                URL.revokeObjectURL(a.href);
+                a.remove();
+            }, 500);
+        }
     </script>
 </body>
 </html>

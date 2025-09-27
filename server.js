@@ -185,7 +185,103 @@ app.get("/api/admin/rows", (req, res) => {
 
 // Serve admin page as static HTML
 app.get("/admin", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "admin.html"));
+    const { leerInvitados } = require('./bodaBot/index.js'); // ajusta si ya lo tenías importado arriba
+    let invitados = [];
+    try {
+        const data = leerInvitados();
+        invitados = data.invitados || [];
+    } catch (e) {
+        console.error('Error leyendo invitados:', e.message);
+    }
+
+    // Construir HTML
+    let html = `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Panel Administración</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<style>
+    body { font-family: Arial, sans-serif; margin:20px; background:#f3f5f0; color:#333; }
+    h1 { margin-top:0; color:#4a5a3a; }
+    table { width:100%; border-collapse:collapse; background:#fff; }
+    th, td { border:1px solid #d6dccc; padding:8px; text-align:center; }
+    th { background:#e8eee0; }
+    input[type="number"] { width:70px; padding:4px; }
+    .admin-container { background:#fff; padding:28px 22px; border-radius:16px; box-shadow:0 8px 28px rgba(0,0,0,.08); margin-bottom:28px; }
+    .bot-btn { padding:14px 26px; background:#8b9b6a; color:#fff; border:none; border-radius:10px; font-size:1rem; cursor:pointer; font-weight:600; }
+    .bot-btn:disabled { background:#b7c3aa; cursor:not-allowed; }
+    #statsResumen { display:flex; flex-wrap:wrap; gap:14px; margin:18px 0 14px; padding:14px 18px; background:#ffffff;
+        border:1px solid #d9dfd1; border-radius:12px; font-size:.95rem; color:#4a5a3a; box-shadow:0 2px 6px rgba(0,0,0,.05); }
+    #qrSection { margin-top:18px; }
+    #qrBox img, #qrBox canvas { width:220px; height:220px; }
+    .save-btn { margin-top:16px; padding:10px 20px; background:#4a5a3a; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600; }
+    .save-btn:hover { background:#3d4a31; }
+</style>
+</head>
+<body>
+<div class="admin-container">
+  <div style="display:flex; flex-direction:column; align-items:center;">
+    <h1 style="margin:0 0 12px;">Panel de Administración</h1>
+    <button id="startBotBtn" class="bot-btn">Iniciar Bot de WhatsApp</button>
+    <div class="status" id="botStatus" style="margin-top:14px; font-size:0.95rem; color:#4a5a3a;">Bot no iniciado</div>
+  </div>
+  <div id="qrWrapper" style="margin-top:18px;"></div>
+</div>
+
+<h2 style="color:#4a5a3a;">Lista de Invitados</h2>
+
+<form method="POST" action="/admin/save">
+  <div id="statsResumen">
+    <span><b>Total:</b> ${invitados.length}</span>
+    <span><b>Pendientes:</b> ${
+        invitados.filter(i => i.BoletosConfirmados === '' || i.BoletosConfirmados === undefined || i.BoletosConfirmados === null).length
+    }</span>
+    <span><b>Irán:</b> ${
+        invitados.filter(i => {
+            const v = parseInt(i.BoletosConfirmados,10);
+            return !isNaN(v) && v > 0;
+        }).length
+    }</span>
+    <span><b>No irán:</b> ${
+        invitados.filter(i => {
+            return (i.BoletosConfirmados !== '' && i.BoletosConfirmados !== null && i.BoletosConfirmados !== undefined) &&
+                   (parseInt(i.BoletosConfirmados,10) === 0);
+        }).length
+    }</span>
+  </div>
+  <table id="invitadosTable">
+    <tr>
+      <th>Nombre</th>
+      <th>Número</th>
+      <th>Boletos Asignados</th>
+      <th>Boletos Confirmados</th>
+    </tr>`;
+
+    invitados.forEach(inv => {
+        html += `
+    <tr>
+      <td>${inv.Nombre || ''}</td>
+      <td>${inv.Numero || ''}</td>
+      <td>${inv.BoletosAsignados || ''}</td>
+      <td>
+        <input type="number" name="confirmados_${inv.Numero || ''}" value="${inv.BoletosConfirmados !== undefined && inv.BoletosConfirmados !== null ? inv.BoletosConfirmados : ''}" min="0">
+      </td>
+    </tr>`;
+    });
+
+    html += `
+  </table>
+  <button type="submit" class="save-btn">💾 Guardar cambios</button>
+</form>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="/admin.js"></script>
+</body>
+</html>`;
+
+    res.send(html);
 });
 
 // API: estado del bot
@@ -299,45 +395,3 @@ app.post("/admin/save", (req, res) => {
 app.listen(PORT, () => {
   console.log(`✅ Servidor corriendo en http://localhost:${PORT}`);
 });
-
-// ...existing code (dentro del handler de GET /admin, justo después de abrir el <form> antes de <table>)...
-    html += `
-    <div id="statsResumen" style="
-        display:flex;
-        flex-wrap:wrap;
-        gap:14px;
-        margin:18px 0 14px;
-        padding:14px 18px;
-        background:#ffffff;
-        border:1px solid #d9dfd1;
-        border-radius:12px;
-        font-size:.95rem;
-        color:#4a5a3a;
-        box-shadow:0 2px 6px rgba(0,0,0,.05);
-    ">
-        <span><b>Total:</b> ${invitados.length}</span>
-        <span><b>Pendientes:</b> ${
-            invitados.filter(i => i.BoletosConfirmados === '' || i.BoletosConfirmados === undefined || i.BoletosConfirmados === null).length
-        }</span>
-        <span><b>Irán:</b> ${
-            invitados.filter(i => {
-                const v = parseInt(i.BoletosConfirmados,10);
-                return !isNaN(v) && v > 0;
-            }).length
-        }</span>
-        <span><b>No irán:</b> ${
-            invitados.filter(i => {
-                // Se considera "No irán" cuando explícitamente está 0 (distinto de vacío)
-                return (i.BoletosConfirmados !== '' && i.BoletosConfirmados !== null && i.BoletosConfirmados !== undefined) &&
-                       (parseInt(i.BoletosConfirmados,10) === 0);
-            }).length
-        }</span>
-    </div>
-    <table id="invitadosTable">
-        <tr>
-            <th>Nombre</th>
-            <th>Número</th>
-            <th>Boletos Asignados</th>
-            <th>Boletos Confirmados</th>
-        </tr>`;
-// ...existing code...
