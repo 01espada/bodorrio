@@ -68,6 +68,18 @@
             </div> -->
         </div>
     </div>
+
+    <!-- Popup de éxito -->
+    <div id="successModal" class="modal-backdrop" aria-hidden="true">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="successTitle">
+        <h3 id="successTitle">¡Gracias por confirmar!</h3>
+        <p>Serás redirigido a la página principal en pocos segundos…</p>
+        <div class="modal-actions">
+          <button type="button" class="submit-btn" id="goHomeNow">Ir ahora</button>
+        </div>
+      </div>
+    </div>
+
     <script>
     const guestNameInput = document.getElementById('guestNameInput');
     const guestNameList = document.getElementById('guestNameList');
@@ -261,11 +273,15 @@
       alert(j.error || 'No se pudo guardar tu confirmación. Intenta de nuevo.');
       return;
     }
-    const successDiv = document.createElement('div');
-    successDiv.className = 'success-message';
-    successDiv.innerHTML = '¡Gracias por confirmar! Redirigiendo...';
-    this.appendChild(successDiv);
-    setTimeout(() => { window.location.href = '/'; }, 1200);
+
+    // Mostrar popup y redirigir
+    const successModal = document.getElementById('successModal');
+    const goHomeNow = document.getElementById('goHomeNow');
+    successModal.classList.add('show');
+    successModal.setAttribute('aria-hidden', 'false');
+    const to = setTimeout(() => { window.location.href = '/'; }, 2500);
+    goHomeNow.onclick = () => { clearTimeout(to); window.location.href = '/'; };
+
   } catch (err) {
     alert('No se pudo guardar tu confirmación. Revisa tu conexión.');
   }
