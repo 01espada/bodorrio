@@ -438,26 +438,57 @@ app.post("/send-all", async (req, res) => {
   try {
     const { texto, personalizarAsignados } = req.body;
     const { rows } = readRows();
-    const invitados = rows.filter(r => r.Numero || r.Telefono || r.WhatsApp);
-    let sent = 0, failed = [];
+
+    // Filtra invitados con número válido
+    const invitados = rows.filter(r =>
+      r.Numero || r.Telefono || r.WhatsApp || r.Celular || r["Número"]
+    );
+
+    let sent = 0;
+    const failed = [];
 
     for (const inv of invitados) {
       const numero =
         inv.Telefono || inv.Numero || inv.WhatsApp || inv.Celular || inv["Número"];
       if (!numero) continue;
 
+      // Personaliza texto con nombre y boletos
       let msg = texto;
-      if (personalizarAsignados && texto.includes("_")) {
+      if (msg.includes("{nombre}")) {
+        const nombreLimpio = (inv.Nombre || "").split(" ")[0]; // solo primer nombre
+        msg = msg.replace("{nombre}", nombreLimpio || "amig@");
+      }
+      if (personalizarAsignados && msg.includes("_")) {
         const boletos = inv.BoletosAsignados || inv["Boletos Asignados"] || 0;
-        msg = texto.replace("_", boletos);
+        msg = msg.replace("_", boletos);
       }
 
+      // Variar saludos para hacerlo más humano
+      const saludos = [
+        "¡Hola {nombre},",
+        "Hola {nombre},",
+        "{nombre}!",
+        "{nombre}"
+      ];
+      let saludo = saludos[Math.floor(Math.random() * saludos.length)];
+      const nombreLimpio = (inv.Nombre || "").split(" ")[0];
+      saludo = saludo.replace("{nombre}", nombreLimpio || "");
+
+      const mensajeFinal = `${saludo}\n\n${msg}`;
+
       try {
-        await sendMessage(numero.toString(), msg);
+        await sendMessage(numero.toString(), mensajeFinal);
         sent++;
-        await new Promise(r => setTimeout(r, 1000)); // evita bloqueo de WhatsApp
+
+        // Espera aleatoria entre 5 y 12 segundos
+        const pausa = 5000 + Math.random() * 7000;
+        console.log(`✅ Enviado a ${numero} (${nombreLimpio}), esperando ${Math.round(pausa/1000)}s...`);
+        await new Promise(r => setTimeout(r, pausa));
+
       } catch (err) {
+        console.error(`❌ Error con ${numero}:`, err.message);
         failed.push({ numero, error: err.message });
+        await new Promise(r => setTimeout(r, 3000)); // pausa corta tras error
       }
     }
 
