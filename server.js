@@ -27,48 +27,9 @@ function resolveExcelPath() {
 
 const EXCEL_PATH = resolveExcelPath();
 
-function readRows() {
-  const wb = xlsx.readFile(EXCEL_PATH);
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  const rows = xlsx.utils.sheet_to_json(sheet, { defval: "" });
-  return { wb, rows, sheetName: wb.SheetNames[0] };
-}
-
-// Reintentos para evitar EBUSY/EPERM al escribir en OneDrive/Excel
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-async function safeWriteWorkbook(wb, destPath) {
-  const dir = path.dirname(destPath);
-  let lastErr = null;
-  for (let attempt = 1; attempt <= 5; attempt++) {
-    const tmp = path.join(dir, `.~invitados_${Date.now()}_${attempt}.xls`);
-    try {
-      // Escribe a un archivo temporal primero
-      xlsx.writeFile(wb, tmp);
-      // Intenta reemplazar el destino
-      try { fs.rmSync(destPath, { force: true }); } catch {}
-      fs.renameSync(tmp, destPath);
-      return; // éxito
-    } catch (err) {
-      lastErr = err;
-      try { fs.rmSync(tmp, { force: true }); } catch {}
-      if (err && (err.code === 'EBUSY' || err.code === 'EPERM')) {
-        await sleep(250 * attempt); // backoff
-        continue;
-      }
-      throw err;
-    }
-  }
-  const e = new Error('Archivo Excel en uso, intenta de nuevo.');
-  e.code = 'EBUSY';
-  throw e;
-}
-
-// Cambiar a async para usar safeWriteWorkbook
-async function writeRows(rows, wb, sheetName) {
-  const ws = xlsx.utils.json_to_sheet(rows);
-  wb.Sheets[sheetName] = ws;
-  await safeWriteWorkbook(wb, EXCEL_PATH);
-}
+// BOT opcional (declaración arriba para que lo vean todas las rutas)
+let botModule = null;
+let botStarted = false;
 
 // ===== Middleware =====
 app.use(cors());
@@ -91,22 +52,94 @@ app.get("/api/info", (req, res) => {
   res.json({ excelPath: EXCEL_PATH });
 });
 
-// Lista de invitados (incluye confirmados)
-app.get("/api/invitados", (req, res) => {
+// Lectura segura del Excel (reintenta si está bloqueado)
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+async function safeReadRows() {
+  let lastErr = null;
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      const buf = fs.readFileSync(EXCEL_PATH);
+      const wb = xlsx.read(buf, { type: 'buffer' });
+      const sheetName = wb.SheetNames[0];
+      const sheet = wb.Sheets[sheetName];
+      const rows = xlsx.utils.sheet_to_json(sheet, { defval: "" });
+      return { wb, rows, sheetName };
+    } catch (e) {
+      lastErr = e;
+      if (e.code === 'EBUSY' || e.code === 'EPERM') {
+        await sleep(200 * attempt);
+        continue;
+      }
+      throw e;
+    }
+  }
+  throw lastErr || new Error('No se pudo leer el Excel');
+}
+
+// Añadir versiones usadas por el código existente
+function readRows() {
+  // Versión síncrona simple (el resto del código la usa sin await)
+  const buf = fs.readFileSync(EXCEL_PATH);
+  const wb = xlsx.read(buf, { type: 'buffer' });
+  const sheetName = wb.SheetNames[0];
+  const sheet = wb.Sheets[sheetName];
+  const rows = xlsx.utils.sheet_to_json(sheet, { defval: "" });
+  return { wb, rows, sheetName };
+}
+
+// Escritura segura con archivo temporal (mitiga EBUSY/OneDrive)
+async function safeWriteWorkbook(wb, destPath) {
+  const dir = path.dirname(destPath);
+  let lastErr = null;
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    const tmp = path.join(dir, `.~invitados_${Date.now()}_${attempt}.xls`);
+    try {
+      xlsx.writeFile(wb, tmp);
+      try { fs.rmSync(destPath, { force: true }); } catch {}
+      fs.renameSync(tmp, destPath);
+      return;
+    } catch (err) {
+      lastErr = err;
+      try { fs.rmSync(tmp, { force: true }); } catch {}
+      if (err.code === 'EBUSY' || err.code === 'EPERM') {
+        await sleep(250 * attempt);
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw lastErr || new Error('No se pudo escribir el Excel');
+}
+
+async function writeRows(rows, wb, sheetName) {
+  const ws = xlsx.utils.json_to_sheet(rows);
+  wb.Sheets[sheetName] = ws;
+  await safeWriteWorkbook(wb, EXCEL_PATH);
+}
+
+// API invitados (usa lectura segura y mapeo tolerante)
+app.get("/api/invitados", async (req, res) => {
   try {
-    const { rows } = readRows();
-    const invitados = rows.map(r => {
-      const asign = r.BoletosAsignados ?? r.Boletos ?? r["Boletos Asignados"] ?? r.boletos ?? r.boletosAsignados;
-      const conf = r.Confirmados;
-      return {
-        nombre: (r.Nombre || "").toString().trim(),
-        boletosAsignados: Number.isFinite(Number(asign)) ? Number(asign) : null,
-        confirmados: Number.isFinite(Number(conf)) ? Number(conf) : 0
-      };
-    }).filter(i => i.nombre);
+    const { rows } = await safeReadRows();
+    const invitados = rows
+      .map(r => {
+        const nombre = (r.Nombre || "").toString().trim();
+        const asg = r.BoletosAsignados ?? r.Boletos ?? r["Boletos Asignados"] ?? r.boletosAsignados ?? r.boletos;
+        const conf = r.Confirmados ?? 0;
+        const toNum = v => {
+          const n = Number(v);
+          return Number.isFinite(n) ? n : null;
+        };
+        return {
+          nombre,
+          boletosAsignados: toNum(asg),
+          confirmados: Number(toNum(conf) ?? 0)
+        };
+      })
+      .filter(i => i.nombre);
     res.json({ ok: true, invitados });
   } catch (e) {
-    console.error(e);
+    console.error("GET /api/invitados error:", e);
     res.status(500).json({ ok: false, error: e.message });
   }
 });
@@ -185,103 +218,7 @@ app.get("/api/admin/rows", (req, res) => {
 
 // Serve admin page as static HTML
 app.get("/admin", (req, res) => {
-    const { leerInvitados } = require('./bodaBot/index.js'); // ajusta si ya lo tenías importado arriba
-    let invitados = [];
-    try {
-        const data = leerInvitados();
-        invitados = data.invitados || [];
-    } catch (e) {
-        console.error('Error leyendo invitados:', e.message);
-    }
-
-    // Construir HTML
-    let html = `<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="utf-8">
-<title>Panel Administración</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<style>
-    body { font-family: Arial, sans-serif; margin:20px; background:#f3f5f0; color:#333; }
-    h1 { margin-top:0; color:#4a5a3a; }
-    table { width:100%; border-collapse:collapse; background:#fff; }
-    th, td { border:1px solid #d6dccc; padding:8px; text-align:center; }
-    th { background:#e8eee0; }
-    input[type="number"] { width:70px; padding:4px; }
-    .admin-container { background:#fff; padding:28px 22px; border-radius:16px; box-shadow:0 8px 28px rgba(0,0,0,.08); margin-bottom:28px; }
-    .bot-btn { padding:14px 26px; background:#8b9b6a; color:#fff; border:none; border-radius:10px; font-size:1rem; cursor:pointer; font-weight:600; }
-    .bot-btn:disabled { background:#b7c3aa; cursor:not-allowed; }
-    #statsResumen { display:flex; flex-wrap:wrap; gap:14px; margin:18px 0 14px; padding:14px 18px; background:#ffffff;
-        border:1px solid #d9dfd1; border-radius:12px; font-size:.95rem; color:#4a5a3a; box-shadow:0 2px 6px rgba(0,0,0,.05); }
-    #qrSection { margin-top:18px; }
-    #qrBox img, #qrBox canvas { width:220px; height:220px; }
-    .save-btn { margin-top:16px; padding:10px 20px; background:#4a5a3a; color:#fff; border:none; border-radius:8px; cursor:pointer; font-weight:600; }
-    .save-btn:hover { background:#3d4a31; }
-</style>
-</head>
-<body>
-<div class="admin-container">
-  <div style="display:flex; flex-direction:column; align-items:center;">
-    <h1 style="margin:0 0 12px;">Panel de Administración</h1>
-    <button id="startBotBtn" class="bot-btn">Iniciar Bot de WhatsApp</button>
-    <div class="status" id="botStatus" style="margin-top:14px; font-size:0.95rem; color:#4a5a3a;">Bot no iniciado</div>
-  </div>
-  <div id="qrWrapper" style="margin-top:18px;"></div>
-</div>
-
-<h2 style="color:#4a5a3a;">Lista de Invitados</h2>
-
-<form method="POST" action="/admin/save">
-  <div id="statsResumen">
-    <span><b>Total:</b> ${invitados.length}</span>
-    <span><b>Pendientes:</b> ${
-        invitados.filter(i => i.BoletosConfirmados === '' || i.BoletosConfirmados === undefined || i.BoletosConfirmados === null).length
-    }</span>
-    <span><b>Irán:</b> ${
-        invitados.filter(i => {
-            const v = parseInt(i.BoletosConfirmados,10);
-            return !isNaN(v) && v > 0;
-        }).length
-    }</span>
-    <span><b>No irán:</b> ${
-        invitados.filter(i => {
-            return (i.BoletosConfirmados !== '' && i.BoletosConfirmados !== null && i.BoletosConfirmados !== undefined) &&
-                   (parseInt(i.BoletosConfirmados,10) === 0);
-        }).length
-    }</span>
-  </div>
-  <table id="invitadosTable">
-    <tr>
-      <th>Nombre</th>
-      <th>Número</th>
-      <th>Boletos Asignados</th>
-      <th>Boletos Confirmados</th>
-    </tr>`;
-
-    invitados.forEach(inv => {
-        html += `
-    <tr>
-      <td>${inv.Nombre || ''}</td>
-      <td>${inv.Numero || ''}</td>
-      <td>${inv.BoletosAsignados || ''}</td>
-      <td>
-        <input type="number" name="confirmados_${inv.Numero || ''}" value="${inv.BoletosConfirmados !== undefined && inv.BoletosConfirmados !== null ? inv.BoletosConfirmados : ''}" min="0">
-      </td>
-    </tr>`;
-    });
-
-    html += `
-  </table>
-  <button type="submit" class="save-btn">💾 Guardar cambios</button>
-</form>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="/admin.js"></script>
-</body>
-</html>`;
-
-    res.send(html);
+  res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
 
 // API: estado del bot
@@ -300,20 +237,27 @@ app.get('/bot-qr', (req, res) => {
 
 // API: iniciar bot
 app.post('/start-bot', (req, res) => {
-    if (botStarted) return res.json({ success: true, message: 'Ya iniciado' });
-    try {
-        botModule = require('./bodaBot/index.js');
-        // pasar callback para recibir notificaciones de QR y loguearlas
-        botModule.iniciarBot((qr) => {
-            console.log('QR generado por bot:', !!qr);
-        });
-        botStarted = true;
-        // devolver el QR actual si existe
-        const currentQR = botModule.getLastQR ? botModule.getLastQR() : null;
-        res.json({ success: true, qr: currentQR });
-    } catch (e) {
-        res.json({ success: false, error: e.message });
+  if (botStarted) return res.json({ success: true, message: 'Ya iniciado' });
+  try {
+    // cargar módulo del bot de forma opcional
+    const candidates = [
+      path.join(__dirname, 'bodaBot', 'index.js'),
+      path.join(__dirname, 'index.js'),
+    ];
+    const found = candidates.find(p => fs.existsSync(p));
+    if (!found) return res.status(404).json({ success: false, error: 'Bot no encontrado' });
+
+    botModule = require(found);
+    if (botModule && typeof botModule.iniciarBot === 'function') {
+      botModule.iniciarBot((qr) => console.log('QR generado por bot:', !!qr));
+      botStarted = true;
+      const currentQR = botModule.getLastQR ? botModule.getLastQR() : null;
+      return res.json({ success: true, qr: currentQR });
     }
+    return res.status(500).json({ success: false, error: 'Módulo del bot inválido' });
+  } catch (e) {
+    return res.json({ success: false, error: e.message });
+  }
 });
 
 // API: enviar mensaje por WhatsApp
@@ -396,105 +340,32 @@ app.listen(PORT, () => {
   console.log(`✅ Servidor corriendo en http://localhost:${PORT}`);
 });
 
-// ===== WhatsApp BOT =====
-const qrcode = require('qrcode-terminal');
-const { iniciarBot, getLastQR, isReady, sendMessage } = require('./index.js');
+// ===== WhatsApp BOT (legacy) =====
+// Elimina el bloque legacy que hacía require('./index.js') y duplicaba rutas.
+// Antes:
+//   const qrcode = require('qrcode-terminal');
+//   const { iniciarBot, getLastQR, isReady, sendMessage } = require('./index.js');
+//   app.get("/start-bot", ...)
+//   app.get("/bot-qr", ...)
+//   app.post("/send-message", ...)
+//   app.post("/send-all", ...)
+//   ... y el bloque "Inicia bot opcionalmente (si existe)"
+// Reemplázalo por este loader opcional que no truena si el bot no existe:
 
-let qrText = null;
-
-// Iniciar bot al abrir panel
-app.get("/start-bot", (req, res) => {
+(function initOptionalBot() {
   try {
-    iniciarBot((qr) => {
-      qrText = qr;
-      console.log("Nuevo QR generado");
-    });
-    res.json({ ok: true });
-  } catch (e) {
-    res.status(500).json({ ok: false, error: e.message });
-  }
-});
-
-// Obtener QR (para mostrar en admin.html)
-app.get("/bot-qr", (req, res) => {
-  if (isReady()) return res.json({ ready: true });
-  const qr = getLastQR();
-  res.json({ ready: false, qr });
-});
-
-// Enviar mensaje individual
-app.post("/send-message", async (req, res) => {
-  try {
-    const { numero, texto } = req.body;
-    await sendMessage(numero, texto);
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
-});
-
-// Enviar mensaje a todos los invitados
-app.post("/send-all", async (req, res) => {
-  try {
-    const { texto, personalizarAsignados } = req.body;
-    const { rows } = readRows();
-
-    // Filtra invitados con número válido
-    const invitados = rows.filter(r =>
-      r.Numero || r.Telefono || r.WhatsApp || r.Celular || r["Número"]
-    );
-
-    let sent = 0;
-    const failed = [];
-
-    for (const inv of invitados) {
-      const numero =
-        inv.Telefono || inv.Numero || inv.WhatsApp || inv.Celular || inv["Número"];
-      if (!numero) continue;
-
-      // Personaliza texto con nombre y boletos
-      let msg = texto;
-      if (msg.includes("{nombre}")) {
-        const nombreLimpio = (inv.Nombre || "").split(" ")[0]; // solo primer nombre
-        msg = msg.replace("{nombre}", nombreLimpio || "amig@");
-      }
-      if (personalizarAsignados && msg.includes("_")) {
-        const boletos = inv.BoletosAsignados || inv["Boletos Asignados"] || 0;
-        msg = msg.replace("_", boletos);
-      }
-
-      // Variar saludos para hacerlo más humano
-      const saludos = [
-        "¡Hola {nombre},",
-        "Hola {nombre},",
-        "{nombre}!",
-        "{nombre}"
-      ];
-      let saludo = saludos[Math.floor(Math.random() * saludos.length)];
-      const nombreLimpio = (inv.Nombre || "").split(" ")[0];
-      saludo = saludo.replace("{nombre}", nombreLimpio || "");
-
-      const mensajeFinal = `${saludo}\n\n${msg}`;
-
-      try {
-        await sendMessage(numero.toString(), mensajeFinal);
-        sent++;
-
-        // Espera aleatoria entre 5 y 12 segundos
-        const pausa = 5000 + Math.random() * 7000;
-        console.log(`✅ Enviado a ${numero} (${nombreLimpio}), esperando ${Math.round(pausa/1000)}s...`);
-        await new Promise(r => setTimeout(r, pausa));
-
-      } catch (err) {
-        console.error(`❌ Error con ${numero}:`, err.message);
-        failed.push({ numero, error: err.message });
-        await new Promise(r => setTimeout(r, 3000)); // pausa corta tras error
-      }
+    const candidates = [
+      path.join(__dirname, 'bodaBot', 'index.js'),
+      path.join(__dirname, 'index.js'),
+    ];
+    const found = candidates.find(p => fs.existsSync(p));
+    if (found) {
+      botModule = require(found);
+      console.log('Bot cargado desde:', found);
+    } else {
+      console.log('Bot no encontrado (opcional). Continuando solo con el servidor web.');
     }
-
-    res.json({ success: true, sent, total: invitados.length, failed });
   } catch (e) {
-    console.error(e);
-    res.status(500).json({ success: false, error: e.message });
+    console.warn('No se pudo cargar el bot (opcional):', e.message);
   }
-});
+})();
