@@ -395,3 +395,75 @@ app.post("/admin/save", (req, res) => {
 app.listen(PORT, () => {
   console.log(`✅ Servidor corriendo en http://localhost:${PORT}`);
 });
+
+// ===== WhatsApp BOT =====
+const qrcode = require('qrcode-terminal');
+const { iniciarBot, getLastQR, isReady, sendMessage } = require('./index.js');
+
+let qrText = null;
+
+// Iniciar bot al abrir panel
+app.get("/start-bot", (req, res) => {
+  try {
+    iniciarBot((qr) => {
+      qrText = qr;
+      console.log("Nuevo QR generado");
+    });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
+// Obtener QR (para mostrar en admin.html)
+app.get("/bot-qr", (req, res) => {
+  if (isReady()) return res.json({ ready: true });
+  const qr = getLastQR();
+  res.json({ ready: false, qr });
+});
+
+// Enviar mensaje individual
+app.post("/send-message", async (req, res) => {
+  try {
+    const { numero, texto } = req.body;
+    await sendMessage(numero, texto);
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// Enviar mensaje a todos los invitados
+app.post("/send-all", async (req, res) => {
+  try {
+    const { texto, personalizarAsignados } = req.body;
+    const { rows } = readRows();
+    const invitados = rows.filter(r => r.Numero || r.Telefono || r.WhatsApp);
+    let sent = 0, failed = [];
+
+    for (const inv of invitados) {
+      const numero =
+        inv.Telefono || inv.Numero || inv.WhatsApp || inv.Celular || inv["Número"];
+      if (!numero) continue;
+
+      let msg = texto;
+      if (personalizarAsignados && texto.includes("_")) {
+        const boletos = inv.BoletosAsignados || inv["Boletos Asignados"] || 0;
+        msg = texto.replace("_", boletos);
+      }
+
+      try {
+        await sendMessage(numero.toString(), msg);
+        sent++;
+        await new Promise(r => setTimeout(r, 1000)); // evita bloqueo de WhatsApp
+      } catch (err) {
+        failed.push({ numero, error: err.message });
+      }
+    }
+
+    res.json({ success: true, sent, total: invitados.length, failed });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
