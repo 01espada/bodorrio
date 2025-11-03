@@ -19,3 +19,6 @@ pnpm-debug.log*
 .DS_Store
 .env
 .env.*
+
+# RSVP data (Excel, no versionar)
+invitados.xls
