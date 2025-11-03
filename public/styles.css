@@ -75,3 +75,12 @@ body { font-family: 'Open Sans', sans-serif; background: linear-gradient(135deg,
 .hidden { display: none !important; }
 .name-status { margin-top: 6px; color: #fff; opacity: .9; font-size: .9rem; min-height: 1em; }
 #guestCountGroup.hidden { display: none; }
+
+/* Modal de éxito */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 1000; }
+.modal-backdrop.show { display: flex; }
+.modal-card { background: #fff; color: #222; width: calc(100% - 48px); max-width: 440px; padding: 22px 20px; border-radius: 14px; box-shadow: 0 12px 30px rgba(0,0,0,0.2); text-align: center; }
+.modal-card h3 { font-size: 1.4rem; margin-bottom: 8px; }
+.modal-card p { color: #555; margin-bottom: 14px; }
+.modal-actions { display: flex; justify-content: center; }
+.modal-actions .submit-btn { min-width: 160px; }
