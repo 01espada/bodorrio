@@ -240,7 +240,7 @@ app.post("/api/admin/add-guest", async (req, res) => {
       Nombre: nombre.trim(),
       Telefono: telefono ? telefono.trim() : "",
       Confirmacion: "Pendiente",
-      BoletosAsignados: Number(boletos) || 1,
+      Boletos: Number(boletos) || 1,
       Confirmados: 0,
       Mensaje: "",
       RSVP_At: ""
