@@ -195,7 +195,7 @@ app.get("/api/admin/rows", (req, res) => {
     const mapped = rows.map(r => {
       const confirmados = (r.Confirmados ?? "");
       const mensaje = (r.Mensaje ?? "");
-      const boletosAsignados = (r.BoletosAsignados ?? r.Boletos ?? r["Boletos Asignados"] ?? "");
+      const boletosAsignados = (r.Boletos ?? r.BoletosAsignados ?? r["Boletos Asignados"] ?? "");
       const telefono =
         r.Telefono ?? r["Teléfono"] ?? r.Numero ?? r["Número"] ?? r.Celular ?? r.CELULAR ??
         r.WhatsApp ?? r.Whatsapp ?? r["WhatsApp"] ?? r["Whatsapp"] ?? "";
