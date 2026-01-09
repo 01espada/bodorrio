@@ -17,12 +17,27 @@
     .no{color:#b00020;font-weight:700}
     .muted{color:#666}
     .status{margin:8px 0 0;color:#666}
+    .add-btn{padding:10px 16px;background:#8b9b6a;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px}
+    .add-btn:hover{background:#7a8a59}
+    .modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5)}
+    .modal-content{background:#fff;margin:50px auto;padding:24px;border-radius:8px;max-width:500px;box-shadow:0 4px 8px rgba(0,0,0,0.2)}
+    .modal-title{font-size:20px;font-weight:600;margin-bottom:16px}
+    .form-group{margin-bottom:16px}
+    .form-group label{display:block;margin-bottom:6px;font-weight:500}
+    .form-group input{width:100%;padding:8px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box}
+    .modal-buttons{display:flex;gap:8px;justify-content:flex-end;margin-top:20px}
+    .modal-btn{padding:8px 16px;border:none;border-radius:6px;cursor:pointer;font-size:14px}
+    .modal-btn-primary{background:#8b9b6a;color:white}
+    .modal-btn-primary:hover{background:#7a8a59}
+    .modal-btn-secondary{background:#ddd;color:#333}
+    .modal-btn-secondary:hover{background:#ccc}
   </style>
 </head>
 <body>
   <h1>Lista de Invitados</h1>
   <div class="toolbar">
     <div class="search"><input id="q" type="search" placeholder="Buscar por nombre, número o mensaje..."></div>
+    <button class="add-btn" id="addGuestBtn">+ Agregar Invitado</button>
     <div class="status" id="status"></div>
   </div>
   <div class="table-wrap">
@@ -40,6 +55,31 @@
       </thead>
       <tbody id="tbody"></tbody>
     </table>
+  </div>
+
+  <!-- Modal para agregar invitado -->
+  <div id="addGuestModal" class="modal">
+    <div class="modal-content">
+      <h2 class="modal-title">Agregar Nuevo Invitado</h2>
+      <form id="addGuestForm">
+        <div class="form-group">
+          <label for="guestName">Nombre *</label>
+          <input type="text" id="guestName" required>
+        </div>
+        <div class="form-group">
+          <label for="guestPhone">Número de Teléfono</label>
+          <input type="text" id="guestPhone" placeholder="Ej: 523331112233">
+        </div>
+        <div class="form-group">
+          <label for="guestTickets">Boletos Asignados</label>
+          <input type="number" id="guestTickets" min="0" value="1">
+        </div>
+        <div class="modal-buttons">
+          <button type="button" class="modal-btn modal-btn-secondary" id="cancelBtn">Cancelar</button>
+          <button type="submit" class="modal-btn modal-btn-primary">Agregar</button>
+        </div>
+      </form>
+    </div>
   </div>
 
   <script>
@@ -91,6 +131,60 @@
 
     q.addEventListener('input', () => render(data));
     load();
+
+    // Modal handling
+    const modal = document.getElementById('addGuestModal');
+    const addGuestBtn = document.getElementById('addGuestBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const addGuestForm = document.getElementById('addGuestForm');
+
+    addGuestBtn.addEventListener('click', () => {
+      modal.style.display = 'block';
+    });
+
+    cancelBtn.addEventListener('click', () => {
+      modal.style.display = 'none';
+      addGuestForm.reset();
+    });
+
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.style.display = 'none';
+        addGuestForm.reset();
+      }
+    });
+
+    addGuestForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const nombre = document.getElementById('guestName').value.trim();
+      const telefono = document.getElementById('guestPhone').value.trim();
+      const boletos = document.getElementById('guestTickets').value;
+
+      if (!nombre) {
+        alert('Por favor ingresa un nombre');
+        return;
+      }
+
+      statusEl.textContent = 'Agregando invitado...';
+      try {
+        const r = await fetch('/api/admin/add-guest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre, telefono, boletos: parseInt(boletos) || 1 })
+        });
+        const j = await r.json();
+        if (!r.ok || j.ok === false) throw new Error(j.error || 'Error al agregar invitado');
+        
+        modal.style.display = 'none';
+        addGuestForm.reset();
+        await load();
+        alert('Invitado agregado exitosamente');
+      } catch (err) {
+        console.error(err);
+        alert('Error al agregar invitado: ' + err.message);
+        statusEl.textContent = 'Error al agregar invitado';
+      }
+    });
   </script>
 </body>
 </html>

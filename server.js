@@ -216,6 +216,52 @@ app.get("/api/admin/rows", (req, res) => {
   }
 });
 
+// Admin API: Add new guest
+app.post("/api/admin/add-guest", async (req, res) => {
+  try {
+    const { nombre, telefono, boletos } = req.body;
+    if (!nombre || !nombre.trim()) {
+      return res.status(400).json({ ok: false, error: "El nombre es obligatorio" });
+    }
+
+    const { wb, rows, sheetName } = readRows();
+    
+    // Check if guest already exists
+    const existing = rows.find(r => 
+      (r.Nombre || "").toString().trim().toLowerCase() === nombre.trim().toLowerCase()
+    );
+    
+    if (existing) {
+      return res.status(400).json({ ok: false, error: "Ya existe un invitado con ese nombre" });
+    }
+
+    // Create new guest
+    const newGuest = {
+      Nombre: nombre.trim(),
+      Telefono: telefono ? telefono.trim() : "",
+      Confirmacion: "Pendiente",
+      BoletosAsignados: Number(boletos) || 1,
+      Confirmados: 0,
+      Mensaje: "",
+      RSVP_At: ""
+    };
+
+    rows.push(newGuest);
+    await writeRows(rows, wb, sheetName);
+    
+    res.json({ ok: true, message: "Invitado agregado exitosamente" });
+  } catch (e) {
+    console.error("Error adding guest:", e);
+    if (e && (e.code === 'EBUSY' || e.code === 'EPERM')) {
+      return res.status(423).json({ 
+        ok: false, 
+        error: "El archivo de invitados está en uso (Excel/OneDrive). Ciérralo y vuelve a intentar." 
+      });
+    }
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // Serve admin page as static HTML
 app.get("/admin", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
