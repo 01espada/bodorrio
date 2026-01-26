@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Acceso Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body{
+      font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      margin:0;
+      background:linear-gradient(135deg, #8b9b6a 0%, #b4c49e 100%);
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .login-container{
+      background:white;
+      padding:40px;
+      border-radius:12px;
+      box-shadow:0 8px 24px rgba(0,0,0,0.15);
+      max-width:380px;
+      width:100%;
+    }
+    h1{
+      margin:0 0 24px;
+      text-align:center;
+      color:#333;
+      font-size:28px;
+    }
+    .form-group{
+      margin-bottom:20px;
+    }
+    .form-group label{
+      display:block;
+      margin-bottom:8px;
+      font-weight:500;
+      color:#555;
+    }
+    .form-group input{
+      width:100%;
+      padding:12px;
+      border:1px solid #ddd;
+      border-radius:8px;
+      box-sizing:border-box;
+      font-size:15px;
+    }
+    .form-group input:focus{
+      outline:none;
+      border-color:#8b9b6a;
+    }
+    .btn-login{
+      width:100%;
+      padding:12px;
+      background:#8b9b6a;
+      color:white;
+      border:none;
+      border-radius:8px;
+      cursor:pointer;
+      font-size:16px;
+      font-weight:600;
+      margin-top:8px;
+    }
+    .btn-login:hover{
+      background:#7a8a59;
+    }
+    .error{
+      color:#b00020;
+      font-size:14px;
+      margin-top:12px;
+      text-align:center;
+      display:none;
+    }
+    .error.show{
+      display:block;
+    }
+    .subtitle{
+      text-align:center;
+      color:#666;
+      font-size:14px;
+      margin:-12px 0 24px;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <h1>🔐 Panel Admin</h1>
+    <p class="subtitle">Ingresa la contraseña para continuar</p>
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="password">Contraseña</label>
+        <input type="password" id="password" required autofocus>
+      </div>
+      <button type="submit" class="btn-login">Acceder</button>
+      <div id="error" class="error"></div>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const passwordInput = document.getElementById('password');
+    const errorEl = document.getElementById('error');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorEl.classList.remove('show');
+      
+      const password = passwordInput.value;
+      if (!password) {
+        errorEl.textContent = 'Por favor ingresa una contraseña';
+        errorEl.classList.add('show');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.ok) {
+          window.location.href = '/admin';
+        } else {
+          errorEl.textContent = data.error || 'Contraseña incorrecta';
+          errorEl.classList.add('show');
+          passwordInput.value = '';
+          passwordInput.focus();
+        }
+      } catch (err) {
+        errorEl.textContent = 'Error al conectar con el servidor';
+        errorEl.classList.add('show');
+      }
+    });
+  </script>
+</body>
+</html>

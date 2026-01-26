@@ -3,6 +3,14 @@ const path = require("path");
 const fs = require("fs");
 const xlsx = require("xlsx");
 const cors = require("cors");
+const session = require("express-session");
+const multer = require("multer");
+
+// Configurar multer para subir archivos
+const upload = multer({ 
+  dest: path.join(__dirname, 'uploads'),
+  limits: { fileSize: 10 * 1024 * 1024 } // 10MB max
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,10 +39,39 @@ const EXCEL_PATH = resolveExcelPath();
 let botModule = null;
 let botStarted = false;
 
+// ===== Contraseña Admin =====
+// CAMBIAR ESTA CONTRASEÑA por una segura
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "admin2026";
+
 // ===== Middleware =====
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Configurar sesiones
+app.use(session({
+  secret: process.env.SESSION_SECRET || "boda-secret-key-change-this",
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    secure: false, // true en producción con HTTPS
+    httpOnly: true,
+    maxAge: 1000 * 60 * 60 * 24 // 24 horas
+  }
+}));
+
+// Middleware de autenticación
+function requireAuth(req, res, next) {
+  if (req.session && req.session.authenticated) {
+    return next();
+  }
+  // Si es una API request, devolver JSON
+  if (req.path.startsWith('/api/')) {
+    return res.status(401).json({ ok: false, error: 'No autorizado' });
+  }
+  // Si es página HTML, redirigir a login
+  res.redirect('/login');
+}
 
 // Serve static index.html from root or /public if present
 const staticDir = fs.existsSync(path.join(__dirname, "public")) ? "public" : "";
@@ -42,6 +79,36 @@ if (staticDir) app.use("/", express.static(path.join(__dirname, "public")));
 app.use("/", express.static(__dirname));
 
 // ===== API =====
+// Ruta de login
+app.get('/login', (req, res) => {
+  if (req.session && req.session.authenticated) {
+    return res.redirect('/admin');
+  }
+  res.sendFile(path.join(__dirname, 'public', 'login.html'));
+});
+
+// API de login
+app.post('/api/login', (req, res) => {
+  const { password } = req.body;
+  
+  if (password === ADMIN_PASSWORD) {
+    req.session.authenticated = true;
+    res.json({ ok: true });
+  } else {
+    res.status(401).json({ ok: false, error: 'Contraseña incorrecta' });
+  }
+});
+
+// API de logout
+app.post('/api/logout', (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      return res.status(500).json({ ok: false, error: 'Error al cerrar sesión' });
+    }
+    res.json({ ok: true });
+  });
+});
+
 // Ruta para servir el formulario de asistencia
 app.get('/asistencia', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'asistencia.html'));
@@ -189,7 +256,7 @@ app.post("/api/rsvp", async (req, res) => {
 });
 
 // Admin data API (used by public/admin.html)
-app.get("/api/admin/rows", (req, res) => {
+app.get("/api/admin/rows", requireAuth, (req, res) => {
   try {
     const { rows } = readRows();
     const mapped = rows.map(r => {
@@ -217,7 +284,7 @@ app.get("/api/admin/rows", (req, res) => {
 });
 
 // Admin API: Add new guest
-app.post("/api/admin/add-guest", async (req, res) => {
+app.post("/api/admin/add-guest", requireAuth, async (req, res) => {
   try {
     const { nombre, telefono, boletos } = req.body;
     if (!nombre || !nombre.trim()) {
@@ -262,8 +329,97 @@ app.post("/api/admin/add-guest", async (req, res) => {
   }
 });
 
+// Admin API: Download Excel file
+app.get("/api/admin/download-excel", requireAuth, (req, res) => {
+  try {
+    console.log("Intentando descargar Excel desde:", EXCEL_PATH);
+    
+    if (!fs.existsSync(EXCEL_PATH)) {
+      console.error("Archivo no encontrado en:", EXCEL_PATH);
+      return res.status(404).send("Archivo no encontrado");
+    }
+    
+    const fileName = path.basename(EXCEL_PATH);
+    console.log("Enviando archivo:", fileName);
+    
+    res.setHeader('Content-Type', 'application/vnd.ms-excel');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    
+    const fileStream = fs.createReadStream(EXCEL_PATH);
+    fileStream.on('error', (err) => {
+      console.error("Error al leer archivo:", err);
+      if (!res.headersSent) {
+        res.status(500).send("Error al leer el archivo");
+      }
+    });
+    
+    fileStream.pipe(res);
+  } catch (e) {
+    console.error("Error download excel:", e);
+    if (!res.headersSent) {
+      res.status(500).send("Error: " + e.message);
+    }
+  }
+});
+
+// Admin API: Upload Excel file
+app.post("/api/admin/upload-excel", requireAuth, upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ ok: false, error: "No se recibió ningún archivo" });
+    }
+
+    const uploadedPath = req.file.path;
+    
+    // Validar que sea un archivo Excel válido
+    try {
+      const buf = fs.readFileSync(uploadedPath);
+      const wb = xlsx.read(buf, { type: 'buffer' });
+      
+      if (!wb.SheetNames || wb.SheetNames.length === 0) {
+        throw new Error("El archivo no contiene hojas válidas");
+      }
+
+      // Crear backup del archivo actual
+      const backupPath = EXCEL_PATH.replace('.xls', `_backup_${Date.now()}.xls`);
+      if (fs.existsSync(EXCEL_PATH)) {
+        fs.copyFileSync(EXCEL_PATH, backupPath);
+        console.log("Backup creado en:", backupPath);
+      }
+
+      // Reemplazar el archivo actual
+      fs.copyFileSync(uploadedPath, EXCEL_PATH);
+      
+      // Limpiar archivo temporal
+      fs.unlinkSync(uploadedPath);
+
+      res.json({ 
+        ok: true, 
+        message: "Archivo Excel actualizado exitosamente",
+        backup: backupPath
+      });
+    } catch (validationError) {
+      // Limpiar archivo temporal si hay error
+      if (fs.existsSync(uploadedPath)) {
+        fs.unlinkSync(uploadedPath);
+      }
+      return res.status(400).json({ 
+        ok: false, 
+        error: "El archivo no es un Excel válido: " + validationError.message 
+      });
+    }
+  } catch (e) {
+    console.error("Error upload excel:", e);
+    // Limpiar archivo temporal si hay error
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    res.status(500).json({ ok: false, error: e.message });
+  }
+});
+
 // Serve admin page as static HTML
-app.get("/admin", (req, res) => {
+app.get("/admin", requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
 

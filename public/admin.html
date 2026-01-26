@@ -19,6 +19,13 @@
     .status{margin:8px 0 0;color:#666}
     .add-btn{padding:10px 16px;background:#8b9b6a;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px}
     .add-btn:hover{background:#7a8a59}
+    .logout-btn{padding:10px 16px;background:#666;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px}
+    .logout-btn:hover{background:#555}
+    .excel-btn{padding:10px 16px;background:#217346;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px}
+    .excel-btn:hover{background:#185c37}
+    .upload-btn{padding:10px 16px;background:#2b5797;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px}
+    .upload-btn:hover{background:#1e4277}
+    #fileInput{display:none}
     .modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.5)}
     .modal-content{background:#fff;margin:50px auto;padding:24px;border-radius:8px;max-width:500px;box-shadow:0 4px 8px rgba(0,0,0,0.2)}
     .modal-title{font-size:20px;font-weight:600;margin-bottom:16px}
@@ -38,6 +45,10 @@
   <div class="toolbar">
     <div class="search"><input id="q" type="search" placeholder="Buscar por nombre, número o mensaje..."></div>
     <button class="add-btn" id="addGuestBtn">+ Agregar Invitado</button>
+    <button class="excel-btn" id="downloadBtn">📄 Descargar Excel</button>
+    <button class="upload-btn" id="uploadBtn">📂 Subir Excel</button>
+    <input type="file" id="fileInput" accept=".xls,.xlsx">
+    <button class="logout-btn" id="logoutBtn">🚪 Cerrar Sesión</button>
     <div class="status" id="status"></div>
   </div>
   <div class="table-wrap">
@@ -131,6 +142,104 @@
 
     q.addEventListener('input', () => render(data));
     load();
+
+    // Logout functionality
+    const logoutBtn = document.getElementById('logoutBtn');
+    logoutBtn.addEventListener('click', async () => {
+      if (!confirm('¿Seguro que quieres cerrar sesión?')) return;
+      try {
+        await fetch('/api/logout', { method: 'POST' });
+        window.location.href = '/login';
+      } catch (err) {
+        console.error('Error al cerrar sesión:', err);
+        alert('Error al cerrar sesión');
+      }
+    });
+
+    // Excel download functionality
+    const downloadBtn = document.getElementById('downloadBtn');
+    downloadBtn.addEventListener('click', async () => {
+      try {
+        statusEl.textContent = 'Descargando Excel...';
+        const response = await fetch('/api/admin/download-excel');
+        
+        if (!response.ok) {
+          // Verificar si es una redirección a login
+          if (response.redirected || response.status === 401) {
+            window.location.href = '/login';
+            return;
+          }
+          throw new Error('Error al descargar el archivo');
+        }
+        
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'invitados.xls';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        statusEl.textContent = 'Excel descargado exitosamente';
+        setTimeout(() => statusEl.textContent = `${data.length} registros`, 2000);
+      } catch (err) {
+        console.error('Error al descargar:', err);
+        alert('Error al descargar Excel: ' + err.message);
+        statusEl.textContent = 'Error al descargar';
+      }
+    });
+
+    // Excel upload functionality
+    const uploadBtn = document.getElementById('uploadBtn');
+    const fileInput = document.getElementById('fileInput');
+    
+    uploadBtn.addEventListener('click', () => {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      if (!file.name.match(/\.(xls|xlsx)$/i)) {
+        alert('Por favor selecciona un archivo Excel (.xls o .xlsx)');
+        fileInput.value = '';
+        return;
+      }
+
+      if (!confirm('¿Estás seguro de que quieres reemplazar el archivo Excel actual? Se creará un backup automático.')) {
+        fileInput.value = '';
+        return;
+      }
+
+      try {
+        statusEl.textContent = 'Subiendo Excel...';
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch('/api/admin/upload-excel', {
+          method: 'POST',
+          body: formData
+        });
+
+        const result = await response.json();
+        
+        if (!response.ok || result.ok === false) {
+          throw new Error(result.error || 'Error al subir archivo');
+        }
+
+        alert('Excel actualizado exitosamente. Se creó un backup del archivo anterior.');
+        fileInput.value = '';
+        await load(); // Recargar datos
+      } catch (err) {
+        console.error('Error al subir:', err);
+        alert('Error al subir Excel: ' + err.message);
+        statusEl.textContent = 'Error al subir';
+        fileInput.value = '';
+      }
+    });
 
     // Modal handling
     const modal = document.getElementById('addGuestModal');
