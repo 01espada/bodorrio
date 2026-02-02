@@ -85,12 +85,12 @@ function iniciarBot(qrCallback) {
         let invitado = invitados.find(inv => inv.Numero.toString() === msg.from.replace("@c.us", ""));
         if (!invitado) return;
         if (texto === "todos") {
-            actualizarBoletos(msg.from, invitado.BoletosAsignados);
-            msg.reply(`¡Gracias! 🎉 Hemos confirmado tus ${invitado.BoletosAsignados} boletos.`);
+            actualizarBoletos(msg.from, invitado.Boletos);
+            msg.reply(`¡Gracias! 🎉 Hemos confirmado tus ${invitado.Boletos} boletos.`);
         } else if (!isNaN(parseInt(texto))) {
             let num = parseInt(texto);
-            if (num > invitado.BoletosAsignados) {
-                msg.reply(`⚠️ Solo tienes ${invitado.BoletosAsignados} boletos asignados. Por favor indica un número válido.`);
+            if (num > invitado.Boletos) {
+                msg.reply(`⚠️ Solo tienes ${invitado.Boletos} boletos asignados. Por favor indica un número válido.`);
             } else {
                 actualizarBoletos(msg.from, num);
                 msg.reply(`¡Gracias! 🎉 Hemos confirmado ${num} boleto(s) para ti.`);

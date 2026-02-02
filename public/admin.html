@@ -58,7 +58,7 @@
           <th>Nombre</th>
           <th>Número</th>
           <th>Confirmación</th>
-          <th>Boletos asignados</th>
+          <th>Boletos</th>
           <th>Confirmados</th>
           <th>Mensaje</th>
           <th>RSVP</th>
@@ -82,7 +82,7 @@
           <input type="text" id="guestPhone" placeholder="Ej: 523331112233">
         </div>
         <div class="form-group">
-          <label for="guestTickets">Boletos Asignados</label>
+            <label for="guestTickets">Boletos</label>
           <input type="number" id="guestTickets" min="0" value="1">
         </div>
         <div class="modal-buttons">
@@ -115,7 +115,7 @@
           <td>${esc(r.Nombre)}</td>
           <td>${esc(r.Telefono)}</td>
           <td class="${cls}">${esc(r.Confirmacion)}</td>
-          <td>${esc(r.BoletosAsignados)}</td>
+          <td>${esc(r.Boletos)}</td>
           <td>${esc(r.Confirmados)}</td>
           <td>${esc(r.Mensaje)}</td>
           <td><span class="muted">${esc(r.RSVP_At)}</span></td>

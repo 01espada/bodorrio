@@ -191,7 +191,7 @@ app.get("/api/invitados", async (req, res) => {
     const invitados = rows
       .map(r => {
         const nombre = (r.Nombre || "").toString().trim();
-        const asg = r.BoletosAsignados ?? r.Boletos ?? r["Boletos Asignados"] ?? r.boletosAsignados ?? r.boletos;
+        const asg = r.Boletos ?? r.BoletosAsignados ?? r["Boletos Asignados"] ?? r.boletos ?? r.boletosAsignados;
         const conf = r.Confirmados ?? 0;
         const toNum = v => {
           const n = Number(v);
@@ -199,7 +199,7 @@ app.get("/api/invitados", async (req, res) => {
         };
         return {
           nombre,
-          boletosAsignados: toNum(asg),
+          boletos: toNum(asg),
           confirmados: Number(toNum(conf) ?? 0)
         };
       })
@@ -231,7 +231,7 @@ app.post("/api/rsvp", async (req, res) => {
     if (isNo) {
       confirmados = 0;
     } else if (asistir === "si") {
-      const assignedRaw = rows[idx].BoletosAsignados ?? rows[idx].Boletos ?? rows[idx]["Boletos Asignados"] ?? rows[idx].boletos ?? rows[idx].boletosAsignados;
+      const assignedRaw = rows[idx].Boletos ?? rows[idx].BoletosAsignados ?? rows[idx]["Boletos Asignados"] ?? rows[idx].boletos ?? rows[idx].boletosAsignados;
       const assignedNum = Number(assignedRaw);
       confirmados = Number.isFinite(assignedNum) ? assignedNum : (Number.isFinite(b) ? b : 0);
     } else {
@@ -262,15 +262,15 @@ app.get("/api/admin/rows", requireAuth, (req, res) => {
     const mapped = rows.map(r => {
       const confirmados = (r.Confirmados ?? "");
       const mensaje = (r.Mensaje ?? "");
-      const boletosAsignados = (r.Boletos ?? r.BoletosAsignados ?? r["Boletos Asignados"] ?? "");
+      const boletos = r.Boletos || r.BoletosAsignados || r["Boletos Asignados"] || r.boletos || r.boletosAsignados || "";
       const telefono =
-        r.Telefono ?? r["Teléfono"] ?? r.Numero ?? r["Número"] ?? r.Celular ?? r.CELULAR ??
-        r.WhatsApp ?? r.Whatsapp ?? r["WhatsApp"] ?? r["Whatsapp"] ?? "";
+        r.Telefono || r["Teléfono"] || r.Numero || r["Número"] || r.Celular || r.CELULAR ||
+        r.WhatsApp || r.Whatsapp || r["WhatsApp"] || r["Whatsapp"] || "";
       return {
         Nombre: r.Nombre || "",
-        Telefono: telefono,                              // ← devolver Telefono
+        Telefono: telefono,
         Confirmacion: r.Confirmacion || "Pendiente",
-        BoletosAsignados: boletosAsignados,
+        Boletos: boletos,
         Confirmados: confirmados,
         Mensaje: mensaje,
         RSVP_At: r.RSVP_At || ""
@@ -500,7 +500,7 @@ app.post('/send-all', express.json(), async (req, res) => {
             try {
                 // Encontrar invitado por número para personalizar
                 const invitado = invitados.find(inv => (inv && inv.Numero != null) && inv.Numero.toString().trim() === numero);
-                const asignados = invitado && (invitado.BoletosAsignados != null) ? String(invitado.BoletosAsignados) : '';
+                const asignados = invitado && (invitado.Boletos != null) ? String(invitado.Boletos) : '';
                 const personalized = texto.replace(/_/g, asignados);
                 // Validación básica de dígitos
                 const digits = numero.replace(/\D/g, '');
@@ -528,7 +528,7 @@ app.post("/admin/save", (req, res) => {
     const nuevos = invitados.map((inv, i) => ({
         Nombre: req.body[`nombre_${i}`] ?? inv.Nombre,
         Numero: req.body[`numero_${i}`] ?? inv.Numero,
-        BoletosAsignados: parseInt(req.body[`asignados_${i}`] ?? inv.BoletosAsignados),
+      Boletos: parseInt(req.body[`asignados_${i}`] ?? inv.Boletos),
         BoletosConfirmados: req.body[`confirmados_${i}`]
             ? parseInt(req.body[`confirmados_${i}`])
             : inv.BoletosConfirmados ?? ""

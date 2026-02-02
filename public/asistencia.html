@@ -32,6 +32,7 @@
                         <input class="guest-select" name="guestName" id="guestNameInput" list="guestNameList" placeholder="Escribe tu nombre..." autocomplete="off" required />
                         <datalist id="guestNameList"></datalist>
                         <div id="nameStatus" class="name-status"></div>
+                        <button type="button" class="submit-btn hidden" id="selectNameBtn" style="width: 100%; margin-top: 0.5rem;"></button>
                     </div>
                     <div class="radio-group hidden" id="attendanceSection">
                         <label class="form-label">Hemos reservado <strong><span id="assignedTickets">X</span></strong> lugares.<br> ¿La cantidad de boletos es correcta?</label>
@@ -84,26 +85,48 @@
     const guestNameInput = document.getElementById('guestNameInput');
     const guestNameList = document.getElementById('guestNameList');
     const nameStatus = document.getElementById('nameStatus');
+    const selectNameBtn = document.getElementById('selectNameBtn');
     const assignedTicketsSpan = document.getElementById('assignedTickets');
     const assignedTicketsInlineSpan = document.getElementById('assignedTicketsInline');
     const attendanceSection = document.getElementById('attendanceSection');
     const messageSection = document.getElementById('messageSection');
     const rsvpInfo = document.getElementById('rsvpInfo');
     const defaultRsvpInfoHTML = `<p>Por favor confirma tu asistencia antes del<br><strong>11 de Febrero del 2026</strong></p>`;
+    
+    // Selección del botón
+    selectNameBtn.addEventListener('click', function() {
+        const nombre = this.dataset.nombre;
+        if (nombre) {
+            guestNameInput.value = nombre;
+            this.classList.add('hidden');
+            actualizarBoletosAsignados();
+        }
+    });
+    
     // Filtrar sugerencias: si >1 coincidencia, no mostrar; si 0, mostrar mensaje
     guestNameInput.addEventListener('input', function() {
         const val = this.value.trim().toLowerCase();
-        if (!val) { guestNameList.innerHTML=''; nameStatus.textContent=''; return; }
+        if (!val) { 
+            guestNameList.innerHTML=''; 
+            nameStatus.textContent=''; 
+            selectNameBtn.classList.add('hidden');
+            return; 
+        }
         const matches = nombresValidos.filter(n => n.toLowerCase().includes(val));
         if (matches.length === 1) {
             guestNameList.innerHTML = `<option value="${matches[0]}"></option>`;
             nameStatus.textContent = '';
+            selectNameBtn.textContent = `${matches[0]}`;
+            selectNameBtn.dataset.nombre = matches[0];
+            selectNameBtn.classList.remove('hidden');
         } else if (matches.length === 0) {
             guestNameList.innerHTML = '';
             nameStatus.textContent = 'Nombre no encontrado';
+            selectNameBtn.classList.add('hidden');
         } else {
             guestNameList.innerHTML = '';
             nameStatus.textContent = '';
+            selectNameBtn.classList.add('hidden');
         }
     });
     const attendYes = document.getElementById('attendYes');
@@ -197,7 +220,7 @@
                 if (rsvpInfo) rsvpInfo.innerHTML = defaultRsvpInfoHTML;
                 return;
             }
-            const boletosNum = parseInt(inv.boletosAsignados ?? '0', 10);
+            const boletosNum = parseInt(inv.boletos ?? '0', 10);
             const displayBoletos = !isNaN(boletosNum) ? boletosNum : 0;
             assignedTicketsSpan.textContent = displayBoletos;
             if (assignedTicketsInlineSpan) assignedTicketsInlineSpan.textContent = displayBoletos;
@@ -255,7 +278,7 @@
   let boletosToSend = 0;
   if (attendance === 'si') {
     const inv = invitados.find(i => (i.nombre||'').toString().trim().toLowerCase() === guestName.toLowerCase());
-    const asg = inv && typeof inv.boletosAsignados !== 'undefined' ? Number(inv.boletosAsignados) : NaN;
+    const asg = inv && typeof inv.boletos !== 'undefined' ? Number(inv.boletos) : NaN;
     boletosToSend = Number.isFinite(asg) ? asg : Number(guestCount);
   } else if (attendance === 'cambiar') {
     boletosToSend = Number(guestCount);
