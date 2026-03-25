@@ -17,6 +17,11 @@
     .no{color:#b00020;font-weight:700}
     .muted{color:#666}
     .status{margin:8px 0 0;color:#666}
+    .tickets-summary{display:flex;gap:16px;margin:8px 0 0;flex-wrap:wrap}
+    .ticket-badge{padding:4px 12px;border-radius:12px;font-size:13px;font-weight:600}
+    .ticket-badge.confirmed{background:#d4edda;color:#155724}
+    .ticket-badge.declined{background:#f8d7da;color:#721c24}
+    .ticket-badge.pending{background:#fff3cd;color:#856404}
     .add-btn{padding:10px 16px;background:#8b9b6a;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px}
     .add-btn:hover{background:#7a8a59}
     .logout-btn{padding:10px 16px;background:#666;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px}
@@ -49,7 +54,14 @@
     <button class="upload-btn" id="uploadBtn">📂 Subir Excel</button>
     <input type="file" id="fileInput" accept=".xls,.xlsx">
     <button class="logout-btn" id="logoutBtn">🚪 Cerrar Sesión</button>
+  </div>
+  <div class="data" id="data">
     <div class="status" id="status"></div>
+    <div class="tickets-summary">
+      <span class="ticket-badge confirmed" id="confirmedTickets">✅ Confirmados: 0</span>
+      <span class="ticket-badge declined" id="declinedTickets">❌ No asistirán: 0</span>
+      <span class="ticket-badge pending" id="pendingTickets">⏳ Pendientes: 0</span>
+    </div>
   </div>
   <div class="table-wrap">
     <table id="tbl">
@@ -96,6 +108,9 @@
   <script>
     const tbody = document.getElementById('tbody');
     const statusEl = document.getElementById('status');
+    const confirmedEl = document.getElementById('confirmedTickets');
+    const declinedEl = document.getElementById('declinedTickets');
+    const pendingEl = document.getElementById('pendingTickets');
     const q = document.getElementById('q');
     let data = [];
 
@@ -123,6 +138,17 @@
       }).join('');
 
       statusEl.textContent = `${filtered.length} de ${rows.length} registros`;
+
+      const totalConfirmed = rows.reduce((sum, r) => sum + (parseInt(r.Confirmados) || 0), 0);
+      const totalDeclined = rows
+        .filter(r => r.Confirmacion === 'No asistirá')
+        .reduce((sum, r) => sum + (parseInt(r.Boletos) || 0), 0);
+      const totalPending = rows
+        .filter(r => r.Confirmacion !== 'Asistirá' && r.Confirmacion !== 'No asistirá')
+        .reduce((sum, r) => sum + (parseInt(r.Boletos) || 0), 0);
+      confirmedEl.textContent = `✅ Confirmados: ${totalConfirmed}`;
+      declinedEl.textContent = `❌ No asistirán: ${totalDeclined}`;
+      pendingEl.textContent = `⏳ Pendientes: ${totalPending}`;
     }
 
     async function load(){
