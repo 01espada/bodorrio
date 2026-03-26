@@ -230,6 +230,8 @@ app.post("/api/rsvp", async (req, res) => {
     let confirmados;
     if (isNo) {
       confirmados = 0;
+    } else if (asistirRaw === "cambiar") {
+      confirmados = isNaN(b) ? 0 : b;
     } else if (asistir === "si") {
       const assignedRaw = rows[idx].Boletos ?? rows[idx].BoletosAsignados ?? rows[idx]["Boletos Asignados"] ?? rows[idx].boletos ?? rows[idx].boletosAsignados;
       const assignedNum = Number(assignedRaw);
