@@ -55,7 +55,7 @@
                 </div>
                 <div id="guestCountGroup" class="form-group hidden">
                     <label class="form-label">¿Cuántas personas asistirán?</label>
-                    <input class="guest-select" type="number" name="guestCount" min="1" max="10" step="1" placeholder="1 - 10" />
+                    <input class="guest-select" type="number" name="guestCount" min="1" max="10" step="1" placeholder="1 - 20" />
                 </div>
                 <div class="form-group hidden" id="messageSection">
                     <label class="form-label">Mensaje especial (opcional):</label>
@@ -241,7 +241,7 @@
             updateSubmitState();
 
             if (guestCountInput) {
-                const defaultCount = Math.max(1, Math.min(10, isNaN(boletosNum) ? 1 : boletosNum));
+                const defaultCount = Math.max(1, Math.min(20, isNaN(boletosNum) ? 1 : boletosNum));
                 guestCountInput.value = String(defaultCount);
             }
         }
@@ -258,8 +258,8 @@
   let guestCount = formData.get('guestCount') || '1';
   const guestCountNum = parseInt(guestCount, 10);
   if (attendance !== 'ninguno') {
-    if (isNaN(guestCountNum) || guestCountNum < 1 || guestCountNum > 10) {
-      alert('Ingresa un número de personas entre 1 y 10');
+    if (isNaN(guestCountNum) || guestCountNum < 1 || guestCountNum > 20) {
+      alert('Ingresa un número de personas entre 1 y 20');
       return;
     }
     guestCount = String(guestCountNum);

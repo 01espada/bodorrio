@@ -34,6 +34,26 @@ function resolveExcelPath() {
 }
 
 const EXCEL_PATH = resolveExcelPath();
+const BACKUP_DIR = path.join(__dirname, 'backups');
+
+// Crea un backup con timestamp del Excel actual
+function autoBackup() {
+  if (!fs.existsSync(EXCEL_PATH)) return;
+  if (!fs.existsSync(BACKUP_DIR)) fs.mkdirSync(BACKUP_DIR, { recursive: true });
+  const ts = new Date().toISOString().replace(/[:.]/g, '-');
+  const dest = path.join(BACKUP_DIR, `invitados_${ts}.xls`);
+  fs.copyFileSync(EXCEL_PATH, dest);
+  console.log(`📦 Backup creado: ${dest}`);
+  // Conservar solo los últimos 30 backups
+  const files = fs.readdirSync(BACKUP_DIR)
+    .filter(f => f.startsWith('invitados_') && f.endsWith('.xls'))
+    .sort();
+  if (files.length > 30) {
+    files.slice(0, files.length - 30).forEach(f => {
+      try { fs.rmSync(path.join(BACKUP_DIR, f)); } catch {}
+    });
+  }
+}
 
 // BOT opcional (declaración arriba para que lo vean todas las rutas)
 let botModule = null;
@@ -542,6 +562,7 @@ app.post("/admin/save", (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`✅ Servidor corriendo en http://localhost:${PORT}`);
+  autoBackup();
 });
 
 // ===== WhatsApp BOT (legacy) =====

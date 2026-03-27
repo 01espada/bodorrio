@@ -22,3 +22,4 @@ pnpm-debug.log*
 
 # RSVP data (Excel, no versionar)
 invitados.xls
+backups/
